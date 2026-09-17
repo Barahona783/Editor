@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <sstream>
 #include "GestorEntidades.hpp"
+#include "Entidad.hpp"
 
 class SerializadorEscena {
 public:
@@ -48,7 +49,7 @@ public:
         }
 
         std::string linea;
-        Entidad entidadActual = 0;
+        Entidad entidadActual(0); // Inicializada correctamente con el constructor de Entidad
         std::string nombreLeido = "Entidad";
         Vector3 posLeida(0.0f, 0.0f, 0.0f);
         Vector3 escalaLeida(1.0f, 1.0f, 1.0f);
@@ -68,8 +69,10 @@ public:
             } 
             else if (tipo == "NOMBRE") {
                 ss >> nombreLeido;
-                if (entidadActual.ObtenerID() != 0) {
-                    gestor.AsignarNombre(entidadActual, ComponenteNombre(nombreLeido));
+                // Si la entidad es válida, actualizamos el componente de nombre de forma segura
+                ComponenteNombre* compNombre = gestor.ObtenerNombre(entidadActual);
+                if (compNombre) {
+                    compNombre->Nombre = nombreLeido;
                 }
             } 
             else if (tipo == "TRANSFORM") {
@@ -79,9 +82,13 @@ public:
             } 
             else if (tipo == "FIN_ENTIDAD") {
                 if (entidadActual.ObtenerID() != 0 && tieneTransform) {
-                    gestor.AsignarTransformacion(entidadActual, ComponenteTransformacion(posLeida));
+                    ComponenteTransformacion* compTrans = gestor.ObtenerTransformacion(entidadActual);
+                    if (compTrans) {
+                        compTrans->Posicion = posLeida;
+                        compTrans->Escala = escalaLeida;
+                    }
                 }
-                entidadActual = 0;
+                entidadActual = Entidad(0); // Reset usando el constructor de la clase
             }
         }
 

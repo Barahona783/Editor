@@ -1,13 +1,13 @@
 #pragma once
 #include <GL/gl.h>
 
-// --- Ayudamos al analizador de ACode incluyendo Entidad primero ---
 #include "Entidad.hpp" 
 #include "GestorEntidades.hpp"
 #include "JerarquiaEscena.hpp"
 #include "Inspector.hpp"
 #include "ConsolaEditor.hpp"
 #include "ControladorModo.hpp"
+#include "SistemaRendimiento.hpp"
 
 class SistemaUI {
 private:
@@ -19,7 +19,7 @@ public:
     void AlternarModoEditor() { m_MostrarEditor = !m_MostrarEditor; }
     bool EstaModoEditorActivo() const { return m_MostrarEditor; }
 
-    void DibujarPanelEditor(GestorEntidades& gestor, JerarquiaEscena& jerarquia, Inspector& inspector, const ControladorModo& controlador) {
+    void DibujarPanelEditor(GestorEntidades& gestor, JerarquiaEscena& jerarquia, Inspector& inspector, const ControladorModo& controlador, SistemaRendimiento& rendimiento) {
         if (!m_MostrarEditor) return;
 
         glMatrixMode(GL_PROJECTION);
@@ -89,5 +89,11 @@ public:
 
         // Renderizado lógico de los paneles del editor conectados
         jerarquia.RenderizarArbol(gestor);
+        
+        // Conectamos el Inspector con su método correcto
+        inspector.MostrarInspector(gestor);
+
+        // Renderizamos nuestro sistema universal de rendimiento y monitoreo térmico
+        rendimiento.RenderizarPanelRendimiento();
     }
 };

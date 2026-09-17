@@ -21,6 +21,7 @@
 #include "Inspector.hpp"
 #include "ConsolaEditor.hpp"
 #include "SistemaUI.hpp"
+#include "SistemaRendimiento.hpp" // <--- 1. Incluimos nuestro subsistema universal
 #include "SistemaSeleccion.hpp"
 #include "Entrada.hpp"
 #include "SerializadorEscena.hpp"
@@ -47,6 +48,8 @@ int main() {
     JerarquiaEscena jerarquiaEscena;
     Inspector inspector;
     SistemaUI sistemaUI;
+    SistemaRendimiento sistemaRendimiento; // <--- 2. Instanciamos el sistema de rendimiento
+    SistemaSeleccion sistemaSeleccion;     // <--- 3. Instanciamos el sistema de selección que añadimos
 
     Entidad objetoPrincipal = gestorEntidades.CrearEntidad("ObjetoCubo");
     gestorEntidades.AsignarTransformacion(objetoPrincipal, ComponenteTransformacion(Vector3(0.0f, 0.0f, -5.0f)));
@@ -64,7 +67,8 @@ int main() {
             trans->Posicion.Y += 0.001f;
         }
 
-        sistemaUI.DibujarPanelEditor(gestorEntidades, jerarquiaEscena, inspector, controladorModo);
+        // 3. Pasamos el sistema de rendimiento al panel del editor
+        sistemaUI.DibujarPanelEditor(gestorEntidades, jerarquiaEscena, inspector, controladorModo, sistemaRendimiento);
 
         if (contexto) {
             contexto->IntercambiarBúferes();
