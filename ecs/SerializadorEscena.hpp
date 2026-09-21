@@ -6,13 +6,14 @@
 #include <sstream>
 #include "GestorEntidades.hpp"
 #include "Entidad.hpp"
+#include "Componentes.hpp"
 
 class SerializadorEscena {
 public:
     static bool GuardarEscena(GestorEntidades& gestor, const std::string& rutaArchivo) {
         std::ofstream archivo(rutaArchivo);
         if (!archivo.is_open()) {
-            std::cerr << "Error al abrir archivo para guardar: " << rutaArchivo << "\n";
+            std::cerr << "[SerializadorEscena] Error al abrir archivo para guardar: " << rutaArchivo << "\n";
             return false;
         }
 
@@ -37,25 +38,27 @@ public:
         }
 
         archivo.close();
-        std::cout << "Escena guardada correctamente en: " << rutaArchivo << "\n";
+        std::cout << "[SerializadorEscena] Escena guardada correctamente en: " << rutaArchivo << "\n";
         return true;
     }
 
     static bool CargarEscena(GestorEntidades& gestor, const std::string& rutaArchivo) {
         std::ifstream archivo(rutaArchivo);
         if (!archivo.is_open()) {
-            std::cerr << "Error al abrir archivo para cargar: " << rutaArchivo << "\n";
+            std::cerr << "[SerializadorEscena] Advertencia: No se encontró el archivo de escena: " << rutaArchivo << ". Se iniciará con una escena limpia.\n";
             return false;
         }
 
         std::string linea;
-        Entidad entidadActual(0); // Inicializada correctamente con el constructor de Entidad
+        Entidad entidadActual(0); 
         std::string nombreLeido = "Entidad";
         Vector3 posLeida(0.0f, 0.0f, 0.0f);
         Vector3 escalaLeida(1.0f, 1.0f, 1.0f);
         bool tieneTransform = false;
 
         while (std::getline(archivo, linea)) {
+            if (linea.empty()) continue;
+
             std::stringstream ss(linea);
             std::string tipo;
             ss >> tipo;
@@ -63,16 +66,24 @@ public:
             if (tipo == "ENTIDAD") {
                 uint32_t id;
                 ss >> id;
+                // Creamos la entidad base con un nombre temporal por defecto
                 entidadActual = gestor.CrearEntidad("EntidadTemporal");
                 nombreLeido = "Entidad_" + std::to_string(id);
                 tieneTransform = false;
             } 
             else if (tipo == "NOMBRE") {
-                ss >> nombreLeido;
-                // Si la entidad es válida, actualizamos el componente de nombre de forma segura
-                ComponenteNombre* compNombre = gestor.ObtenerNombre(entidadActual);
-                if (compNombre) {
-                    compNombre->Nombre = nombreLeido;
+                // Capturamos el resto de la línea por si el nombre contiene espacios o identificadores largos
+                std::getline(ss, nombreLeido);
+                // Quitamos el espacio inicial si lo hubiera después de "NOMBRE "
+                if (!nombreLeido.empty() && nombreLeido[0] == ' ') {
+                    nombreLeido = nombreLeido.substr(1);
+                }
+
+                if (entidadActual.ObtenerID() != 0) {
+                    ComponenteNombre* compNombre = gestor.ObtenerNombre(entidadActual);
+                    if (compNombre) {
+                        compNombre->Nombre = nombreLeido;
+                    }
                 }
             } 
             else if (tipo == "TRANSFORM") {
@@ -82,18 +93,22 @@ public:
             } 
             else if (tipo == "FIN_ENTIDAD") {
                 if (entidadActual.ObtenerID() != 0 && tieneTransform) {
+                    // Asignamos la transformación leída a la entidad recién creada
+                    gestor.AsignarTransformacion(entidadActual, ComponenteTransformacion(posLeida));
+                    
+                    // Si el componente ya existe de forma interna, aseguramos escala también si aplica
                     ComponenteTransformacion* compTrans = gestor.ObtenerTransformacion(entidadActual);
                     if (compTrans) {
                         compTrans->Posicion = posLeida;
                         compTrans->Escala = escalaLeida;
                     }
                 }
-                entidadActual = Entidad(0); // Reset usando el constructor de la clase
+                entidadActual = Entidad(0); 
             }
         }
 
         archivo.close();
-        std::cout << "Escena cargada correctamente desde: " << rutaArchivo << "\n";
+        std::cout << "[SerializadorEscena] Escena cargada correctamente desde: " << rutaArchivo << "\n";
         return true;
     }
 };

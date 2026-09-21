@@ -47,4 +47,23 @@ public:
 
         return resultado;
     }
+
+    // ==========================================
+    // NUEVAS FUNCIONES DE ORIENTACIÓN ESPACIAL
+    // ==========================================
+
+    // Matriz de vista orientada (LookAt basado en vectores de dirección)
+    Matriz4x4 ObtenerMatrizVistaLookAt(const Vector3& objetivo) const {
+        Vector3 zaxis = (m_Posicion - objetivo).ObtenerNormalizado();
+        Vector3 xaxis = m_Arriba.ProductoCruz(zaxis).ObtenerNormalizado();
+        Vector3 yaxis = zaxis.ProductoCruz(xaxis);
+
+        Matriz4x4 vista;
+        vista.Elementos[0][0] = xaxis.X; vista.Elementos[0][1] = xaxis.Y; vista.Elementos[0][2] = xaxis.Z; vista.Elementos[0][3] = -xaxis.ProductoEscalar(m_Posicion);
+        vista.Elementos[1][0] = yaxis.X; vista.Elementos[1][1] = yaxis.Y; vista.Elementos[1][2] = yaxis.Z; vista.Elementos[1][3] = -yaxis.ProductoEscalar(m_Posicion);
+        vista.Elementos[2][0] = zaxis.X; vista.Elementos[2][1] = zaxis.Y; vista.Elementos[2][2] = zaxis.Z; vista.Elementos[2][3] = -zaxis.ProductoEscalar(m_Posicion);
+        vista.Elementos[3][0] = 0.0f;    vista.Elementos[3][1] = 0.0f;    vista.Elementos[3][2] = 0.0f;    vista.Elementos[3][3] = 1.0f;
+
+        return vista;
+    }
 };

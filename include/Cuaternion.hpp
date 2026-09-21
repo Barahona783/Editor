@@ -47,4 +47,38 @@ struct Cuaternion {
         }
         return Cuaternion();
     }
+
+    // ==========================================
+    // NUEVAS FUNCIONES TENSORIALES Y DE PUENTE
+    // ==========================================
+
+    // Obtener el cuaternión conjugado (útil para inversiones espaciales)
+    Cuaternion ObtenerConjugado() const {
+        return Cuaternion(W, -X, -Y, -Z);
+    }
+
+    // Convertir el cuaternión a un Tensor de orden 2 (Representación matricial 3x3 compatible)
+    void A_Tensor3x3(float tensor[3][3]) const {
+        float xx = X * X;
+        float xy = X * Y;
+        float xz = X * Z;
+        float wx = W * X;
+        float yy = Y * Y;
+        float yz = Y * Z;
+        float wy = W * Y;
+        float zz = Z * Z;
+        float wz = W * Z;
+
+        tensor[0][0] = 1.0f - 2.0f * (yy + zz);
+        tensor[0][1] = 2.0f * (xy - wz);
+        tensor[0][2] = 2.0f * (xz + wy);
+
+        tensor[1][0] = 2.0f * (xy + wz);
+        tensor[1][1] = 1.0f - 2.0f * (xx + zz);
+        tensor[1][2] = 2.0f * (yz - wx);
+
+        tensor[2][0] = 2.0f * (xz - wy);
+        tensor[2][1] = 2.0f * (yz + wx);
+        tensor[2][2] = 1.0f - 2.0f * (xx + yy);
+    }
 };
