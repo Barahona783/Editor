@@ -19,6 +19,7 @@ public:
         return m_EntidadSeleccionada;
     }
 
+    // Se mantiene intacto todo el sistema de consola y se prepara para el renderizado UI
     void RenderizarArbol(GestorEntidades& gestor) {
         const auto& entidades = gestor.ObtenerTodasLasEntidades();
         std::cout << "--- JERARQUIA DE LA ESCENA ---\n";

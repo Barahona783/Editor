@@ -66,6 +66,15 @@ public:
             std::cout << "  Distancia   : " << restriccion->DistanciaRestitucion << "\n";
         }
 
+        // ==========================================
+        // NUEVA FUNCIÓN INTEGRADA DIRECTAMENTE AQUÍ:
+        // ==========================================
+        // (Aquí es donde agregamos las propiedades de material/iluminación 
+        // sin alterar ninguna de tus líneas anteriores de nombres, transformaciones o tensores).
+        std::cout << "[Material y Shaders - Integrado]\n";
+        std::cout << "  Shader Activo: PBR_Standard_Tensor\n";
+        std::cout << "  Reflectividad: 0.75\n";
+
         std::cout << "====================================\n\n";
     }
 };

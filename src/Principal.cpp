@@ -30,6 +30,7 @@
 #include "SerializadorEscena.hpp"
 #include "GestorPlugins.hpp"
 #include "Comportamiento.hpp"       // Nuestro nuevo sistema de scripts nativos
+#include "GizmosEditor.hpp"         // <-- NUEVO: Gizmos de transformación 3D
 
 // --- Nuevos Sistemas Nativos de Alto Rendimiento ---
 #include "BusEventos.hpp"
@@ -59,6 +60,7 @@ int main() {
     SistemaUI sistemaUI;
     SistemaRendimiento sistemaRendimiento;
     SistemaSeleccion sistemaSeleccion;
+    GizmosEditor gizmosEditor;                  // <-- NUEVO: Instancia del sistema de gizmos
     GestorPlugins gestorPlugins;
     SistemaFisica sistemaFisica;                 // Instanciación del sistema de física y deformación por tensores
     SistemaMundoAbierto sistemaMundoAbierto(80.0f); // Streaming de mundo abierto con radio de corte de 80 unidades
@@ -175,6 +177,17 @@ int main() {
 
         // --- Dibujar interfaz y paneles del editor (Pasando el sistema de selección) ---
         sistemaUI.DibujarPanelEditor(gestorEntidades, jerarquiaEscena, inspector, controladorModo, sistemaRendimiento, sistemaSeleccion);
+
+        // ==========================================
+        // RENDERIZADO DE GIZMOS 3D SOBRE LA ENTIDAD SELECCIONADA
+        // ==========================================
+        Entidad entidadSeleccionada = sistemaSeleccion.ObtenerEntidadSeleccionada();
+        if (entidadSeleccionada.ObtenerID() != 0) {
+            ComponenteTransformacion* transSeleccionada = gestorEntidades.ObtenerTransformacion(entidadSeleccionada);
+            if (transSeleccionada) {
+                gizmosEditor.RenderizarGizmo3D(*transSeleccionada);
+            }
+        }
 
         if (contexto) {
             contexto->IntercambiarBúferes();

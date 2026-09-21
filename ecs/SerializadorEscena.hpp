@@ -34,6 +34,14 @@ public:
                         << t->Escala.X << " " << t->Escala.Y << " " << t->Escala.Z << "\n";
             }
 
+            // ==========================================
+            // INTEGRACIÓN: Serializar estado del tensor de deformación
+            // ==========================================
+            ComponenteTensorDeformacion* tensor = gestor.ObtenerComponente<ComponenteTensorDeformacion>(e);
+            if (tensor) {
+                archivo << "TENSOR " << tensor->LimiteElasticidad << " " << (tensor->EstaDeformado ? 1 : 0) << "\n";
+            }
+
             archivo << "FIN_ENTIDAD\n";
         }
 
@@ -56,6 +64,11 @@ public:
         Vector3 escalaLeida(1.0f, 1.0f, 1.0f);
         bool tieneTransform = false;
 
+        // Variables temporales para el tensor integrado
+        float elasticidadLeida = 150.0f;
+        bool deformadoLeido = false;
+        bool tieneTensor = false;
+
         while (std::getline(archivo, linea)) {
             if (linea.empty()) continue;
 
@@ -70,6 +83,7 @@ public:
                 entidadActual = gestor.CrearEntidad("EntidadTemporal");
                 nombreLeido = "Entidad_" + std::to_string(id);
                 tieneTransform = false;
+                tieneTensor = false;
             } 
             else if (tipo == "NOMBRE") {
                 // Capturamos el resto de la línea por si el nombre contiene espacios o identificadores largos
@@ -91,6 +105,12 @@ public:
                    >> escalaLeida.X >> escalaLeida.Y >> escalaLeida.Z;
                 tieneTransform = true;
             } 
+            else if (tipo == "TENSOR") {
+                int defInt = 0;
+                ss >> elasticidadLeida >> defInt;
+                deformadoLeido = (defInt != 0);
+                tieneTensor = true;
+            }
             else if (tipo == "FIN_ENTIDAD") {
                 if (entidadActual.ObtenerID() != 0 && tieneTransform) {
                     // Asignamos la transformación leída a la entidad recién creada
@@ -103,6 +123,17 @@ public:
                         compTrans->Escala = escalaLeida;
                     }
                 }
+
+                // Asignar el componente tensor cargado si existía en el archivo
+                if (entidadActual.ObtenerID() != 0 && tieneTensor) {
+                    gestor.AsignarTensorDeformacion(entidadActual, ComponenteTensorDeformacion(elasticidadLeida));
+                    ComponenteTensorDeformacion* compTensor = gestor.ObtenerComponente<ComponenteTensorDeformacion>(entidadActual);
+                    if (compTensor) {
+                        compTensor->LimiteElasticidad = elasticidadLeida;
+                        compTensor->EstaDeformado = deformadoLeido;
+                    }
+                }
+
                 entidadActual = Entidad(0); 
             }
         }
