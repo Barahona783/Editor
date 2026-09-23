@@ -25,6 +25,7 @@ private:
     std::unordered_map<IdentificadorEntidad, ComponenteTensorDeformacion> m_ComponentesTensorDeformacion;
     std::unordered_map<IdentificadorEntidad, ComponenteInerciaRotacional> m_ComponentesInerciaRotacional;
     std::unordered_map<IdentificadorEntidad, ComponenteRestriccionFisica> m_ComponentesRestriccionFisica;
+    std::unordered_map<IdentificadorEntidad, ComponenteAerodinamico> m_ComponentesAerodinamica;
 
 public:
     Entidad CrearEntidad(const std::string& nombre = "ObjetoMotor") {
@@ -67,6 +68,10 @@ public:
         m_ComponentesRestriccionFisica[entidad.ObtenerID()] = restriccion;
     }
 
+    void AsignarAerodinamica(const Entidad& entidad, const ComponenteAerodinamico& aero) {
+        m_ComponentesAerodinamica[entidad.ObtenerID()] = aero;
+    }
+
     // --- Métodos de Obtención ---
     ComponenteTransformacion* ObtenerTransformacion(const Entidad& entidad) {
         auto iter = m_ComponentesTransformacion.find(entidad.ObtenerID());
@@ -103,6 +108,11 @@ public:
         return (iter != m_ComponentesRestriccionFisica.end()) ? &(iter->second) : nullptr;
     }
 
+    ComponenteAerodinamico* ObtenerAerodinamica(const Entidad& entidad) {
+        auto iter = m_ComponentesAerodinamica.find(entidad.ObtenerID());
+        return (iter != m_ComponentesAerodinamica.end()) ? &(iter->second) : nullptr;
+    }
+
     // Método genérico para compatibilidad con sistemas avanzados
     template <typename T>
     T* ObtenerComponente(const Entidad& entidad);
@@ -131,4 +141,9 @@ inline ComponenteInerciaRotacional* GestorEntidades::ObtenerComponente<Component
 template <>
 inline ComponenteRestriccionFisica* GestorEntidades::ObtenerComponente<ComponenteRestriccionFisica>(const Entidad& entidad) {
     return ObtenerRestriccionFisica(entidad);
+}
+
+template <>
+inline ComponenteAerodinamico* GestorEntidades::ObtenerComponente<ComponenteAerodinamico>(const Entidad& entidad) {
+    return ObtenerAerodinamica(entidad);
 }

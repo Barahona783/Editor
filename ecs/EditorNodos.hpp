@@ -3,6 +3,9 @@
 #include <string>
 #include <iostream>
 #include <GL/gl.h>
+#include "Entidad.hpp"
+#include "Componentes.hpp"
+#include "GestorEntidades.hpp"
 
 struct PinNodo {
     std::string Nombre;
@@ -15,7 +18,11 @@ struct NodoVisual {
     float X, Y; // Posición en pantalla del nodo
     float Ancho, Alto;
     std::vector<PinNodo> Pines;
-    std::string TipoAccion; // Ej: "InputKey", "Branch", "SetColor", "DebugLog"
+    std::string TipoAccion; // Ej: "InputKey", "Branch", "SetColor", "DebugLog", "AplicarFuerza", "ModificarTensor"
+    
+    // Parámetros internos configurables para la ejecución del nodo
+    float ParametroFloat = 0.0f;
+    std::string ParametroTexto = "";
 };
 
 struct ConexionNodos {
@@ -47,7 +54,7 @@ public:
         nuevoNodo.Titulo = titulo;
         nuevoNodo.X = x;
         nuevoNodo.Y = y;
-        nuevoNodo.Ancho = 160.0f; // Ancho visual por defecto del nodo
+        nuevoNodo.Ancho = 180.0f; // Ancho visual por defecto del nodo
         nuevoNodo.Alto = 90.0f;   // Alto dinámico según pines
         nuevoNodo.TipoAccion = tipo;
         m_Nodos.push_back(nuevoNodo);
@@ -87,12 +94,44 @@ public:
     }
 
     // =========================================================================
+    // PUENTE DE EJECUCIÓN ECS: Traduce y ejecuta la red lógica sobre las entidades
+    // =========================================================================
+    void EjecutarRedNodos(GestorEntidades& gestor, const Entidad& entidadObjetivo) {
+        if (!m_MostrarEditorNodos || m_Nodos.empty()) return;
+
+        // Recorremos los nodos configurados en la red visual para evaluar su comportamiento
+        for (const auto& nodo : m_Nodos) {
+            if (nodo.TipoAccion == "DebugLog") {
+                std::cout << "[ScriptVisual - DebugLog] Ejecutando nodo ID " << nodo.ID << ": " << nodo.ParametroTexto << "\n";
+            }
+            else if (nodo.TipoAccion == "AplicarFuerza") {
+                // Interactúa directamente con el componente de cuerpo rígido del ECS
+                ComponenteCuerpoRigido* cuerpo = gestor.ObtenerCuerpoRigido(entidadObjetivo);
+                if (cuerpo) {
+                    cuerpo->Velocidad = cuerpo->Velocidad + Vector3(0.0f, nodo.ParametroFloat, 0.0f);
+                    std::cout << "[ScriptVisual] Fuerza aplicada vía nodos a entidad objetivo.\n";
+                }
+            }
+            else if (nodo.TipoAccion == "ModificarTensor") {
+                // Interactúa con el subsistema tensorial avanzado que integramos previamente
+                ComponenteTensorDeformacion* tensor = gestor.ObtenerTensorDeformacion(entidadObjetivo);
+                if (tensor) {
+                    Vector3 impactoSimulado(nodo.ParametroFloat, nodo.ParametroFloat * 1.5f, 0.0f);
+                    Vector3 normalSuelo(0.0f, 1.0f, 0.0f);
+                    tensor->AplicarImpactoTensorial(impactoSimulado, normalSuelo);
+                    std::cout << "[ScriptVisual] Impacto tensorial ejecutado desde el nodo visual.\n";
+                }
+            }
+        }
+    }
+
+    // =========================================================================
     // RENDERIZADO GRÁFICO DE NODOS, PINES Y CONEXIONES (Estilo Blueprint / UI)
     // =========================================================================
     void RenderizarGrafoNodos(float offsetX, float offsetY) {
         if (!m_MostrarEditorNodos) return;
 
-        // 1. Dibujar Cables de Conexión (Curvas o líneas directas entre pines)
+        // 1. Dibujar Cables de Conexión
         glLineWidth(2.5f);
         glBegin(GL_LINES);
         for (const auto& conexion : m_Conexiones) {
@@ -105,14 +144,12 @@ public:
             }
 
             if (nodoOri && nodoDes) {
-                // Posiciones aproximadas de salida y entrada basadas en los nodos
                 float x1 = offsetX + nodoOri->X + nodoOri->Ancho;
                 float y1 = offsetY + nodoOri->Y + (nodoOri->Alto * 0.5f);
                 float x2 = offsetX + nodoDes->X;
                 float y2 = offsetY + nodoDes->Y + (nodoDes->Alto * 0.5f);
 
-                // Color del cable (Verde brillante para ejecución, azul/naranja para datos)
-                glColor3f(0.2f, 0.8f, 0.4f); 
+                glColor3f(0.2f, 0.8f, 0.4f); // Verde ejecución
                 glVertex2f(x1, y1);
                 glVertex2f(x2, y2);
             }
@@ -125,7 +162,7 @@ public:
             float rx = offsetX + nodo.X;
             float ry = offsetY + nodo.Y;
 
-            // Cuerpo principal del nodo (Fondo oscuro profesional)
+            // Cuerpo principal del nodo
             glColor4f(0.12f, 0.12f, 0.16f, 0.95f);
             glBegin(GL_QUADS);
                 glVertex2f(rx, ry);
@@ -134,8 +171,8 @@ public:
                 glVertex2f(rx, ry + nodo.Alto);
             glEnd();
 
-            // Barra de título superior del Nodo (Con color distintivo de categoría)
-            glColor4f(0.85f, 0.35f, 0.10f, 0.95f); // Naranja/Marrón estilo evento
+            // Barra de título superior del Nodo
+            glColor4f(0.85f, 0.35f, 0.10f, 0.95f);
             glBegin(GL_QUADS);
                 glVertex2f(rx, ry);
                 glVertex2f(rx + nodo.Ancho, ry);
@@ -155,7 +192,6 @@ public:
             // Dibujar Pines dentro del Nodo
             float pinYOffset = ry + 35.0f;
             for (const auto& pin : nodo.Pines) {
-                // Color del pin (Blanco/Amarillo según tipo)
                 if (pin.EsEntrada) {
                     glColor3f(0.2f, 0.7f, 0.9f); // Azul entrada
                 } else {
@@ -164,7 +200,6 @@ public:
 
                 float pinX = pin.EsEntrada ? rx + 8.0f : rx + nodo.Ancho - 12.0f;
                 
-                // Dibujar indicador visual del pin (pequeño cuadrado/círculo)
                 glBegin(GL_QUADS);
                     glVertex2f(pinX - 3.0f, pinYOffset - 3.0f);
                     glVertex2f(pinX + 3.0f, pinYOffset - 3.0f);

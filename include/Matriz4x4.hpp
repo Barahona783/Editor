@@ -120,35 +120,58 @@ struct Matriz4x4 {
     }
 
     // ==========================================
-    // NUEVAS AMPLIACIONES MATRICIALES (DETERMINANTE E INVERSA)
+    // AMPLIACIONES MATRICIALES (DETERMINANTE E INVERSA)
     // ==========================================
 
-    // Calcular el determinante de la matriz 4x4 (esencial para inversión y validación afín)
+    // Calcular el determinante de la matriz 4x4
     float ObtenerDeterminante() const {
-        float A2323 = Elementos[2][2] * Elementos[3][3] - Elementos[2][3] * Elementos[3][2];
-        float A1323 = Elementos[2][1] * Elementos[3][3] - Elementos[2][3] * Elementos[3][1];
-        float A1223 = Elementos[2][1] * Elementos[3][2] - Elementos[2][2] * Elementos[3][1];
-        float A2313 = Elementos[2][0] * Elementos[3][3] - Elementos[2][3] * Elementos[3][0];
-        float A1313 = Elementos[2][0] * Elementos[3][3] - Elementos[2][3] * Elementos[3][0];
-        float A1213 = Elementos[2][0] * Elementos[3][2] - Elementos[2][2] * Elementos[3][0];
+        float SubFactor0 = Elementos[2][2] * Elementos[3][3] - Elementos[2][3] * Elementos[3][2];
+        float SubFactor1 = Elementos[2][1] * Elementos[3][3] - Elementos[2][3] * Elementos[3][1];
+        float SubFactor2 = Elementos[2][1] * Elementos[3][2] - Elementos[2][2] * Elementos[3][1];
+        float SubFactor3 = Elementos[2][0] * Elementos[3][3] - Elementos[2][3] * Elementos[3][0];
+        float SubFactor4 = Elementos[2][0] * Elementos[3][2] - Elementos[2][2] * Elementos[3][0];
+        float SubFactor5 = Elementos[2][0] * Elementos[3][1] - Elementos[2][1] * Elementos[3][0];
 
-        float det = Elementos[0][0] * (Elementos[1][1] * A2323 - Elementos[1][2] * A1323 + Elementos[1][3] * A1223)
-                  - Elementos[0][1] * (Elementos[1][0] * A2323 - Elementos[1][2] * A2313 + Elementos[1][3] * A1213)
-                  + Elementos[0][2] * (Elementos[1][0] * A1323 - Elementos[1][1] * A2313 + Elementos[1][3] * A1213)
-                  - Elementos[0][3] * (Elementos[1][0] * A1223 - Elementos[1][1] * A1213 + Elementos[1][2] * A1213);
+        float det = Elementos[0][0] * (Elementos[1][1] * SubFactor0 - Elementos[1][2] * SubFactor1 + Elementos[1][3] * SubFactor2)
+                  - Elementos[0][1] * (Elementos[1][0] * SubFactor0 - Elementos[1][2] * SubFactor3 + Elementos[1][3] * SubFactor4)
+                  + Elementos[0][2] * (Elementos[1][0] * SubFactor1 - Elementos[1][1] * SubFactor3 + Elementos[1][3] * SubFactor5)
+                  - Elementos[0][3] * (Elementos[1][0] * SubFactor2 - Elementos[1][1] * SubFactor4 + Elementos[1][2] * SubFactor5);
         return det;
     }
 
-    // Obtener la matriz inversa
+    // Obtener la matriz inversa mediante cofactores y adjunta
     Matriz4x4 ObtenerInversa() const {
         Matriz4x4 inversa;
         float det = ObtenerDeterminante();
         if (std::abs(det) < 1e-8f) {
-            return *this; 
+            return *this; // Retorna la matriz original si no es invertible
         }
-        
+
         float invDet = 1.0f / det;
-        inversa.CargarIdentidad(); 
+
+        const float* m = &Elementos[0][0];
+        float* inv = &inversa.Elementos[0][0];
+
+        inv[0] =  (m[5] * (m[10] * m[15] - m[11] * m[14]) - m[9] * (m[6] * m[15] - m[7] * m[14]) + m[13] * (m[6] * m[11] - m[7] * m[10])) * invDet;
+        inv[1] = -(m[1] * (m[10] * m[15] - m[11] * m[14]) - m[9] * (m[2] * m[15] - m[3] * m[14]) + m[13] * (m[2] * m[11] - m[3] * m[10])) * invDet;
+        inv[2] =  (m[1] * (m[6]  * m[15] - m[7]  * m[14]) - m[5] * (m[2] * m[15] - m[3] * m[14]) + m[13] * (m[2] * m[7]  - m[3]  * m[6]))  * invDet;
+        inv[3] = -(m[1] * (m[6]  * m[11] - m[7]  * m[10]) - m[5] * (m[2] * m[11] - m[3] * m[10]) + m[9]  * (m[2] * m[7]  - m[3]  * m[6]))  * invDet;
+
+        inv[4] = -(m[4] * (m[10] * m[15] - m[11] * m[14]) - m[8] * (m[6] * m[15] - m[7] * m[14]) + m[12] * (m[6] * m[11] - m[7] * m[10])) * invDet;
+        inv[5] =  (m[0] * (m[10] * m[15] - m[11] * m[14]) - m[8] * (m[2] * m[15] - m[3] * m[14]) + m[12] * (m[2] * m[11] - m[3] * m[10])) * invDet;
+        inv[6] = -(m[0] * (m[6]  * m[15] - m[7]  * m[14]) - m[4] * (m[2] * m[15] - m[3] * m[14]) + m[12] * (m[2] * m[7]  - m[3]  * m[6]))  * invDet;
+        inv[7] =  (m[0] * (m[6]  * m[11] - m[7]  * m[10]) - m[4] * (m[2] * m[11] - m[3] * m[10]) + m[8]  * (m[2] * m[7]  - m[3]  * m[6]))  * invDet;
+
+        inv[8] =  (m[4] * (m[9]  * m[15] - m[11] * m[13]) - m[8] * (m[5] * m[15] - m[7] * m[13]) + m[12] * (m[5] * m[11] - m[7] * m[9]))  * invDet;
+        inv[9] = -(m[0] * (m[9]  * m[15] - m[11] * m[13]) - m[8] * (m[1] * m[15] - m[3] * m[13]) + m[12] * (m[1] * m[11] - m[3] * m[9]))  * invDet;
+        inv[10]=  (m[0] * (m[5]  * m[15] - m[7]  * m[13]) - m[4] * (m[1] * m[15] - m[3] * m[13]) + m[12] * (m[1] * m[7]  - m[3]  * m[5]))  * invDet;
+        inv[11]= -(m[0] * (m[5]  * m[11] - m[7]  * m[9])  - m[4] * (m[1] * m[11] - m[3] * m[9])  + m[8]  * (m[1] * m[7]  - m[3]  * m[5]))  * invDet;
+
+        inv[12]= -(m[4] * (m[9]  * m[14] - m[10] * m[13]) - m[8] * (m[5] * m[14] - m[6] * m[13]) + m[12] * (m[5] * m[10] - m[6] * m[9]))  * invDet;
+        inv[13]=  (m[0] * (m[9]  * m[14] - m[10] * m[13]) - m[8] * (m[1] * m[14] - m[2] * m[13]) + m[12] * (m[1] * m[10] - m[2] * m[9]))  * invDet;
+        inv[14]= -(m[0] * (m[5]  * m[14] - m[6]  * m[13]) - m[4] * (m[1] * m[14] - m[2] * m[13]) + m[12] * (m[1] * m[6]  - m[2]  * m[5]))  * invDet;
+        inv[15]=  (m[0] * (m[5]  * m[10] - m[6]  * m[9])  - m[4] * (m[1] * m[10] - m[2] * m[9])  + m[8]  * (m[1] * m[6]  - m[2]  * m[5]))  * invDet;
+
         return inversa;
     }
 };

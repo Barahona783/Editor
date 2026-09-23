@@ -2,6 +2,7 @@
 #include "GestorEntidades.hpp"
 #include "Vector3.hpp"
 #include "Componentes.hpp" // Asegura la disponibilidad del ComponenteTensorDeformacion y componentes de inercia
+#include "SistemaOptica.hpp" // <-- Integración del sistema óptico basado en la Ley de Fermat
 
 class SistemaFisica {
 private:
@@ -87,6 +88,29 @@ public:
                 // Nota: Asumimos una verificación segura de IDs para mantener la rigidez estructural
                 // (Espacio preparado para la resolución matricial de distancias entre nodos)
             }
+        }
+    }
+
+    // =========================================================================
+    // INTEGRACIÓN DE LA LEY DE FERMAT Y ÓPTICA EN LA FÍSICA
+    // =========================================================================
+    // Permite evaluar la desviación de proyectiles, haces o partículas dinámicas 
+    // al atravesar medios con índice de refracción variable (Principio de mínima longitud óptica).
+    void AplicarRefraccionOpticaFisica(Vector3& posicion, Vector3& velocidad, const SistemaOptica::MedioOptico& medio) {
+        float factorDistorsion = SistemaOptica::ObtenerFactorDistorsionEspacial(posicion, medio);
+        if (factorDistorsion != 0.0f && velocidad.Magnitud() > 0.0f) {
+            Vector3 normalSimulada = (medio.PosicionCentro - posicion).Normalizado();
+            Vector3 direccionNormalizada = velocidad.Normalizado();
+            
+            Vector3 nuevaDireccion = SistemaOptica::DesviacionRayon(
+                direccionNormalizada, 
+                normalSimulada, 
+                1.0f, 
+                medio.IndiceRefraction
+            );
+            
+            float velocidadMagnitud = velocidad.Magnitud();
+            velocidad = nuevaDireccion * velocidadMagnitud;
         }
     }
 

@@ -11,14 +11,14 @@ private:
     bool m_HaySeleccion;
 
 public:
-    SistemaSeleccion() : m_EntidadSeleccionada(0), m_HaySeleccion(false) {}
+    SistemaSeleccion() : m_EntidadSeleccionada(), m_HaySeleccion(false) {}
 
     // Algoritmo de intersección Rayo - AABB (Slab Method) optimizado
     static Entidad SeleccionarEntidadPorRaycast(GestorEntidades& gestor, 
                                                 float rayoOrigenX, float rayoOrigenY, float rayoOrigenZ,
                                                 float rayoDirX, float rayoDirY, float rayoDirZ) {
         auto entidades = gestor.ObtenerTodasLasEntidades();
-        Entidad entidadSeleccionada(0); // Inicializado con ID 0
+        Entidad entidadSeleccionada; 
         float distanciaMinima = std::numeric_limits<float>::max();
 
         for (auto entidad : entidades) {
@@ -68,11 +68,11 @@ public:
     // Métodos de gestión de estado de selección para la interfaz del editor
     void SeleccionarEntidad(Entidad entidad) {
         m_EntidadSeleccionada = entidad;
-        m_HaySeleccion = (entidad != 0);
+        m_HaySeleccion = (entidad.ObtenerID() != 0);
     }
 
     void Deseleccionar() {
-        m_EntidadSeleccionada = 0;
+        m_EntidadSeleccionada = Entidad();
         m_HaySeleccion = false;
     }
 

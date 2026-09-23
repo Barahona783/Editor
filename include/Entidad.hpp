@@ -8,7 +8,7 @@ private:
     IdentificadorEntidad m_ID;
 
 public:
-    explicit Entidad(IdentificadorEntidad id) : m_ID(id) {}
+    explicit Entidad(IdentificadorEntidad id = 0) : m_ID(id) {}
 
     IdentificadorEntidad ObtenerID() const {
         return m_ID;

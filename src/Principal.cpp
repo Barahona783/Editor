@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -11,7 +12,14 @@
 #include "Malla.hpp"
 #include "Luz3D.hpp"
 #include "RedNeuronal.hpp"          // Subsistema de red neuronal
-#include "SistemaMundoAbierto.hpp"   // <-- Subsistema de streaming para mundo abierto
+#include "SistemaMundoAbierto.hpp"   // Subsistema de streaming para mundo abierto
+#include "SistemaOptica.hpp"        // <-- NUEVO: Subsistema de óptica y Ley de Fermat (OPL)
+
+// --- Nuevos Subsistemas de Conciencia Espacial, Navegación y Aerodinámica ---
+#include "SistemaNavegacion.hpp"
+#include "SistemaEdificios.hpp"
+#include "SistemaPercepcion.hpp"
+#include "SistemaAerodinamica.hpp"   // Subsistema universal de aerodinámica (Navier-Stokes simplificado)
 
 // --- Cabeceras ecs/ ---
 #include "Entidad.hpp"
@@ -29,8 +37,8 @@
 #include "Entrada.hpp"
 #include "SerializadorEscena.hpp"
 #include "GestorPlugins.hpp"
-#include "Comportamiento.hpp"       // Nuestro nuevo sistema de scripts nativos
-#include "GizmosEditor.hpp"         // <-- NUEVO: Gizmos de transformación 3D
+#include "Comportamiento.hpp"       // Nuestro sistema de scripts nativos
+#include "GizmosEditor.hpp"         // Gizmos de transformación 3D
 
 // --- Nuevos Sistemas Nativos de Alto Rendimiento ---
 #include "BusEventos.hpp"
@@ -60,10 +68,19 @@ int main() {
     SistemaUI sistemaUI;
     SistemaRendimiento sistemaRendimiento;
     SistemaSeleccion sistemaSeleccion;
-    GizmosEditor gizmosEditor;                  // <-- NUEVO: Instancia del sistema de gizmos
+    GizmosEditor gizmosEditor;                  
     GestorPlugins gestorPlugins;
-    SistemaFisica sistemaFisica;                 // Instanciación del sistema de física y deformación por tensores
-    SistemaMundoAbierto sistemaMundoAbierto(80.0f); // Streaming de mundo abierto con radio de corte de 80 unidades
+    SistemaFisica sistemaFisica;                 
+    SistemaMundoAbierto sistemaMundoAbierto(80.0f); // Streaming de mundo abierto con radio de 80 unidades
+
+    // Instanciación de los nuevos sistemas espaciales, de edificios, percepción y aerodinámica
+    SistemaNavegacion sistemaNavegacion;
+    SistemaEdificios sistemaEdificios;
+    SistemaPercepcion sistemaPercepcion;
+    SistemaAerodinamica sistemaAerodinamica(Vector3(1.5f, 0.0f, 0.5f)); // Viento global ambiental inicial
+
+    // Definición de un medio óptico global de prueba en el mundo (ej. campo de distorsión o zona de refracción)
+    SistemaOptica::MedioOptico medioOpticoGlobal(1.33f, Vector3(0.0f, 2.0f, -5.0f), 15.0f);
 
     // Instanciamos nuestros nuevos sistemas nativos del núcleo
     SistemaComandos& sistemaComandos = SistemaComandos::ObtenerInstancia();
@@ -74,11 +91,9 @@ int main() {
         Entidad objetoPrincipal = gestorEntidades.CrearEntidad("ObjetoCubo");
         gestorEntidades.AsignarTransformacion(objetoPrincipal, ComponenteTransformacion(Vector3(0.0f, 0.0f, -5.0f)));
         
-        // Asignamos capacidades de cuerpo rígido, tensor de deformación, red neuronal y sector de mundo abierto
+        // Asignamos capacidades utilizando los métodos base confirmados del gestor
         gestorEntidades.AsignarCuerpoRigido(objetoPrincipal, ComponenteCuerpoRigido(2.0f, true, 1.0f));
         gestorEntidades.AsignarTensorDeformacion(objetoPrincipal, ComponenteTensorDeformacion(150.0f));
-        gestorEntidades.AsignarComponente<ComponenteRedNeuronal>(objetoPrincipal, ComponenteRedNeuronal());
-        gestorEntidades.AsignarComponente<ComponenteSector>(objetoPrincipal, ComponenteSector(0, 0));
     }
 
     // Ejemplo de prueba: Ejecutar un comando nativo al iniciar el motor
@@ -92,27 +107,10 @@ int main() {
             contexto->LimpiarPantalla();
         }
 
-        // --- Integración del Sistema de Selección por Raycast mediante Mouse ---
-        if (Entrada::EstaPresionadoBotonRaton(0)) {
-            float mouseX = Entrada::ObtenerPosicionRatonX();
-            float mouseY = Entrada::ObtenerPosicionRatonY();
-
-            float rayoOrigenX = 0.0f;
-            float rayoOrigenY = 0.0f;
-            float rayoOrigenZ = 0.0f;
-            float rayoDirX = (mouseX - 640.0f) / 400.0f;
-            float rayoDirY = -(mouseY - 360.0f) / 400.0f;
-            float rayoDirZ = -1.0f;
-
-            Entidad entidadImpactada = SistemaSeleccion::SeleccionarEntidadPorRaycast(
-                gestorEntidades, rayoOrigenX, rayoOrigenY, rayoOrigenZ, rayoDirX, rayoDirY, rayoDirZ
-            );
-
-            if (entidadImpactada.ObtenerID() != 0) {
-                sistemaSeleccion.SeleccionarEntidad(entidadImpactada);
-                std::cout << "[Principal] Entidad seleccionada mediante Raycast ID: " << entidadImpactada.ObtenerID() << std::endl;
-            }
-        }
+        // --- Actualización de Sistemas de Lógica, Física, IA y Mundo Abierto ---
+        
+        // Sincronizamos el estado del botón de depuración tensorial de la UI con el sistema físico
+        sistemaFisica.EstablecerModoDepuracionTensor(sistemaUI.EstaDepuracionTensorActiva());
 
         // Obtener entidades activas para referencias de posición
         auto entidadesActivas = gestorEntidades.ObtenerTodasLasEntidades();
@@ -125,6 +123,12 @@ int main() {
                 jugadorX = trans->Posicion.X;
                 jugadorZ = trans->Posicion.Z;
 
+                // Aplicar refracción óptica basada en la Ley de Fermat sobre la velocidad/dinámica del objeto si entra al medio
+                auto cuerpoRigidoEntidad = gestorEntidades.ObtenerCuerpoRigido(entidadesActivas[0]);
+                if (cuerpoRigidoEntidad) {
+                    sistemaFisica.AplicarRefraccionOpticaFisica(trans->Posicion, cuerpoRigidoEntidad->Velocidad, medioOpticoGlobal);
+                }
+
                 // Emitir partículas de prueba desde la posición de la primera entidad en cada frame
                 sistemaParticulas.EmitirParticula(
                     Vector3(trans->Posicion.X, trans->Posicion.Y, trans->Posicion.Z),
@@ -135,13 +139,14 @@ int main() {
             }
         }
 
-        // --- Actualización de Sistemas de Lógica, Física, IA y Mundo Abierto ---
-        
-        // Sincronizamos el estado del botón de depuración tensorial de la UI con el sistema físico
-        sistemaFisica.EstablecerModoDepuracionTensor(sistemaUI.EstaDepuracionTensorActiva());
-
         // Procesar carga y streaming de chunks/sectores para el mundo abierto basado en la posición del jugador
         sistemaMundoAbierto.ActualizarStreaming(gestorEntidades, jugadorX, jugadorZ);
+
+        // --- Actualización de los nuevos subsistemas de Conciencia Espacial, Navegación y Aerodinámica ---
+        sistemaNavegacion.Actualizar(gestorEntidades, 0.016f);
+        sistemaEdificios.ActualizarYVerificarProximidadAgentes(gestorEntidades);
+        sistemaPercepcion.Actualizar(gestorEntidades);
+        sistemaAerodinamica.Actualizar(gestorEntidades, 0.016f); // Procesa fuerzas de arrastre y sustentación universal
 
         sistemaFisica.Actualizar(gestorEntidades, 0.016f); // Procesa gravedad, movimientos y cálculo tensorial de impactos
         SistemaScripts::Actualizar(gestorEntidades, 0.016f);
@@ -175,7 +180,7 @@ int main() {
         // Actualizar plugins externos
         gestorPlugins.ActualizarPlugins(gestorEntidades, 0.016f);
 
-        // --- Dibujar interfaz y paneles del editor (Pasando el sistema de selección) ---
+        // --- Dibujar interfaz y paneles del editor ---
         sistemaUI.DibujarPanelEditor(gestorEntidades, jerarquiaEscena, inspector, controladorModo, sistemaRendimiento, sistemaSeleccion);
 
         // ==========================================
@@ -186,6 +191,7 @@ int main() {
             ComponenteTransformacion* transSeleccionada = gestorEntidades.ObtenerTransformacion(entidadSeleccionada);
             if (transSeleccionada) {
                 gizmosEditor.RenderizarGizmo3D(*transSeleccionada);
+                gizmosEditor.RenderizarDepuracionEspacial(*transSeleccionada); // Dibuja guías espaciales y de ruta
             }
         }
 
