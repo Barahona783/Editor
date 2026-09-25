@@ -1,6 +1,7 @@
 #pragma once
 #include "Entidad.hpp"
 #include "GestorEntidades.hpp"
+#include "Componentes.hpp"
 #include <iostream>
 
 // Clase base virtual de la cual heredarán todos los scripts de tus entidades
@@ -24,7 +25,7 @@ public:
     static void Actualizar(GestorEntidades& gestor, float dt) {
         auto entidades = gestor.ObtenerTodasLasEntidades();
         for (auto entidad : entidades) {
-            // Aquí puedes iterar y llamar a Actualizar si la entidad posee el ComponenteScript
+            // Verificación y ejecución segura del componente de script asociado a la entidad
             auto* scriptComp = gestor.ObtenerComponente<ComponenteScript>(entidad);
             if (scriptComp && scriptComp->Instancia) {
                 scriptComp->Instancia->Actualizar(entidad, gestor, dt);

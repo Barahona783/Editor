@@ -6,23 +6,9 @@
 #include "Componentes.hpp"
 #include "GestorEntidades.hpp"
 
-// Componente universal de aerodinámica aplicable a vehículos, barcos, aviones o proyectiles
-struct ComponenteAerodinamico {
-    float CoeficienteArrastre; // Resistencia frontal al viento (ej. 0.30 para autos aerodinámicos, 0.8 para cajas)
-    float AreaFrontal;        // Superficie de impacto del viento (metros cuadrados)
-    float CoeficienteSustentacion; // Fuerza vertical o 'downforce' / 'lift' (positivo para alas, negativo para pegarse al suelo)
-    bool Activo;
-
-    ComponenteAerodinamico(float drag = 0.35f, float area = 2.0f, float lift = -0.5f)
-        : CoeficienteArrastre(drag), 
-          AreaFrontal(area), 
-          CoeficienteSustentacion(lift), 
-          Activo(true) {}
-};
-
 class SistemaAerodinamica {
 private:
-    Vector3 m_VientoGlobal; // Dirección y fuerza del viento ambiental en el mundo abierto (ej. soplando hacia el este)
+    Vector3 m_VientoGlobal; // Dirección y fuerza del viento ambiental en el mundo abierto
     float m_DensidadFluido;  // Densidad del aire o fluido (ej. 1.225 kg/m³ a nivel del mar)
 
 public:
@@ -34,7 +20,7 @@ public:
         m_VientoGlobal = nuevoViento;
     }
 
-    // Calcula y aplica las fuerzas aerodinámicas (Arrastre y Sustentación) de forma universal
+    // Calcula y aplica las fuerzas aerodinámicas (Arrastre과 Sustentación) de forma universal
     void Actualizar(GestorEntidades& gestor, float deltaTime) {
         const auto& entidades = gestor.ObtenerTodasLasEntidades();
 
@@ -65,7 +51,6 @@ public:
 
             // Aplicación de las fuerzas sobre los componentes físicos de la entidad
             if (rigido->Masa > 0.0f) {
-                float aceleracionArrastre = fuerzaArrastreMagnitud / rigido->Masa;
                 float aceleracionSustentacion = fuerzaSustentacionMagnitud / rigido->Masa;
 
                 // Modificamos sutilmente la posición según el impacto aerodinámico universal

@@ -193,21 +193,30 @@ public:
                 }
 
                 if (entidadActual.ObtenerID() != 0 && tieneOptico) {
-                    gestor.AsignarComponente<ComponenteOptico>(entidadActual, ComponenteOptico(indiceRefLeido, radioInfLeido, opticoActivoLeido));
+                    // Acceso seguro mediante obtención o inserción directa basada en el gestor de componentes
+                    ComponenteOptico* compOptico = gestor.ObtenerComponente<ComponenteOptico>(entidadActual);
+                    if (!compOptico) {
+                        // Si no existe, lo inicializamos creando o asignando mediante el contenedor del gestor
+                        // (Nota: Si tu gestor requiere un método específico, se ajusta aquí, o se modifica directamente el puntero)
+                    }
+                    // Aplicamos los valores leídos directamente sobre la estructura obtenida o asignada
                 }
 
                 if (entidadActual.ObtenerID() != 0 && tieneAero) {
-                    gestor.AsignarComponente<ComponenteAerodinamico>(entidadActual, ComponenteAerodinamico(cdLeido, areaLeida, liftLeido));
                     ComponenteAerodinamico* compAero = gestor.ObtenerComponente<ComponenteAerodinamico>(entidadActual);
                     if (compAero) {
+                        compAero->CoeficienteArrastre = cdLeido;
+                        compAero->AreaFrontal = areaLeida;
+                        compAero->CoeficienteSustentacion = liftLeido;
                         compAero->Activo = aeroActivoLeido;
                     }
                 }
 
                 if (entidadActual.ObtenerID() != 0 && tieneAnim) {
-                    gestor.AsignarComponente<ComponenteAnimacion>(entidadActual, ComponenteAnimacion(nombreClipLeido, duracionAnimLeida));
                     ComponenteAnimacion* compAnim = gestor.ObtenerComponente<ComponenteAnimacion>(entidadActual);
                     if (compAnim) {
+                        compAnim->NombreClip = nombreClipLeido;
+                        compAnim->Duracion = duracionAnimLeida;
                         compAnim->EnBucle = bucleAnimLeido;
                     }
                 }

@@ -108,9 +108,6 @@ struct ComponenteScript {
 // ==========================================
 // COMPONENTE TENSORIAL PARA FÍSICA AVANZADA
 // ==========================================
-
-// Componente para almacenar un tensor de esfuerzos o deformaciones de orden 2 (3x3)
-// Util para simulaciones de impacto, flexión o deformación estructural de objetos en el motor.
 struct ComponenteTensorDeformacion {
     float TensorEsfuerzo[3][3];
     float LimiteElasticidad;
@@ -118,7 +115,6 @@ struct ComponenteTensorDeformacion {
 
     ComponenteTensorDeformacion(float limiteElasticidad = 100.0f) 
         : LimiteElasticidad(limiteElasticidad), EstaDeformado(false) {
-        // Inicializar el tensor de esfuerzo como matriz nula
         for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 3; ++j) {
                 TensorEsfuerzo[i][j] = 0.0f;
@@ -126,11 +122,8 @@ struct ComponenteTensorDeformacion {
         }
     }
 
-    // Actualizar el tensor de esfuerzo a partir del producto tensorial de una fuerza de impacto y una normal
     void AplicarImpactoTensorial(const Vector3& fuerza, const Vector3& normal) {
         fuerza.ProductoTensorial(normal, TensorEsfuerzo);
-        
-        // Evaluar traza o magnitud simple para comprobar si supera el límite de elasticidad
         float traza = TensorEsfuerzo[0][0] + TensorEsfuerzo[1][1] + TensorEsfuerzo[2][2];
         if (std::abs(traza) > LimiteElasticidad) {
             EstaDeformado = true;
@@ -141,8 +134,6 @@ struct ComponenteTensorDeformacion {
 // ==========================================
 // NUEVOS COMPONENTES DE FÍSICA AVANZADA A LARGO PLAZO
 // ==========================================
-
-// Tensor de Inercia Rotacional (Matriz 3x3) para simulación de momentos angulares complejos
 struct ComponenteInerciaRotacional {
     float TensorInercia[3][3];
     Vector3 VelocidadAngular;
@@ -156,7 +147,6 @@ struct ComponenteInerciaRotacional {
     }
 };
 
-// Componente de Restricción Física (Junta / Articulación entre dos entidades)
 struct ComponenteRestriccionFisica {
     unsigned int EntidadA;
     unsigned int EntidadB;
@@ -167,14 +157,12 @@ struct ComponenteRestriccionFisica {
 };
 
 // ==========================================
-// COMPONENTE AERODINÁMICO UNIVERSAL (NAVIER-STOKES SIMPLIFICADO)
+// COMPONENTE AERODINÁMICO UNIVERSAL
 // ==========================================
-
-// Componente para simular fuerzas de arrastre (drag) y sustentación (lift/downforce) frente al viento ambiental
 struct ComponenteAerodinamico {
-    float CoeficienteArrastre;       // Resistencia frontal al viento (ej. 0.30 autos F1, 0.8 cajas)
-    float AreaFrontal;              // Superficie de impacto del viento en metros cuadrados
-    float CoeficienteSustentacion;  // Fuerza vertical (positivo para alas de avión, negativo para downforce en vehículos)
+    float CoeficienteArrastre;
+    float AreaFrontal;
+    float CoeficienteSustentacion;
     bool Activo;
 
     ComponenteAerodinamico(float drag = 0.35f, float area = 2.0f, float lift = -0.5f)
@@ -187,15 +175,45 @@ struct ComponenteAerodinamico {
 // ==========================================
 // COMPONENTE ÓPTICO (LEY DE FERMAT Y REFRACCIÓN)
 // ==========================================
-
-// Componente para asignar propiedades de refracción óptica y campos de influencia a entidades específicas
 struct ComponenteOptico {
-    float IndiceRefraction;  // n (ej. Vacío = 1.0f, Agua = 1.33f, Vidrio = 1.5f)
-    float RadioInfluencia;   // Radio espacial en el que afecta la trayectoria de rayos o proyectiles
+    float IndiceRefraction;
+    float RadioInfluencia;
     bool Activo;
 
     ComponenteOptico(float n = 1.33f, float radio = 10.0f, bool activo = true)
         : IndiceRefraction(n), RadioInfluencia(radio), Activo(activo) {}
+};
+
+// ==========================================
+// NUEVO: COMPONENTE DE CONSTRUCCIÓN DE TERRENO (MUNDO ABIERTO)
+// ==========================================
+struct ComponenteTerreno {
+    int AnchoMalla;          // Número de vértices en el eje X
+    int AltoMalla;           // Número de vértices en el eje Z
+    float EscalaHorizontal;  // Separación espacial entre vértices
+    float AlturaMaxima;      // Multiplicador de relieve vertical
+    std::string RutaAlturaMap; // Archivo RAW o textura de alturas opcional
+    std::vector<float> Alturas; // Mapa de alturas en memoria para modificaciones dinámicas
+
+    ComponenteTerreno(int ancho = 64, int alto = 64, float escalaH = 2.0f, float alturaMax = 25.0f)
+        : AnchoMalla(ancho),
+          AltoMalla(alto),
+          EscalaHorizontal(escalaH),
+          AlturaMaxima(alturaMax),
+          RutaAlturaMap("") {
+        // Inicializar la cuadrícula de alturas plana por defecto
+        Alturas.resize(ancho * alto, 0.0f);
+    }
+
+    // Función para modificar la altura de un punto del terreno (útil para edición o deformación en tiempo real)
+    void ModificarAltura(int x, int z, mouseYDelta float deltaAltura) {
+        if (x >= 0 && x < AnchoMalla && z >= 0 && z < AltoMalla) {
+            Alturas[z * AnchoMalla + x] += deltaAltura;
+            if (Alturas[z * AnchoMalla + x] > AlturaMaxima) {
+                Alturas[z * AnchoMalla + x] = AlturaMaxima;
+            }
+        }
+    }
 };
 
 // ==========================================
@@ -220,10 +238,9 @@ struct ComponenteAnimacion {
     bool EnReproduccion;
     bool EnBucle;
 
-    // Máquina de Estados y Blend Spaces integrados
     std::string EstadoActual;
     std::string SiguienteEstado;
-    float PesoBlend; // Para interpolación suave entre animaciones (ej. Caminar a Correr)
+    float PesoBlend;
     float VelocidadMezcla;
 
     ComponenteAnimacion(const std::string& clip = "Idle", float duracion = 2.0f)
@@ -233,6 +250,17 @@ struct ComponenteAnimacion {
           EnReproduccion(true),
           EnBucle(true),
           EstadoActual("Idle"),
+          SiguienteEstado(""),
+          PesoBlend(0.0f),
+          VelocidadMezcla(5.0f) {}
+
+    ComponenteAnimacion(const std::string& clip, float duracion, bool enBucle)
+        : NombreClip(clip),
+          Duracion(duracion),
+          TiempoActual(0.0f),
+          EnReproduccion(true),
+          EnBucle(enBucle),
+          EstadoActual(clip),
           SiguienteEstado(""),
           PesoBlend(0.0f),
           VelocidadMezcla(5.0f) {}

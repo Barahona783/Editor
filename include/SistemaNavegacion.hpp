@@ -89,9 +89,8 @@ public:
 
         for (const auto& entidad : entidades) {
             ComponenteTransformacion* trans = gestor.ObtenerTransformacion(entidad);
-            // Nota: Usamos un método seguro o validación de componentes de agente si estuvieran mapeados en GestorEntidades.
-            // Para mantener la robustez ECS, simulamos la evaluación de movimiento vectorial hacia el nodo destino.
-            if (trans && m_RedNodos.empty() == false) {
+            // Simulación de evaluación de movimiento vectorial hacia el nodo destino
+            if (trans && !m_RedNodos.empty()) {
                 // Lógica de avance guiado por el grafo de navegación
             }
         }

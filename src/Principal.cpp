@@ -13,13 +13,16 @@
 #include "Luz3D.hpp"
 #include "RedNeuronal.hpp"          // Subsistema de red neuronal
 #include "SistemaMundoAbierto.hpp"   // Subsistema de streaming para mundo abierto
-#include "SistemaOptica.hpp"        // <-- NUEVO: Subsistema de óptica y Ley de Fermat (OPL)
+#include "SistemaOptica.hpp"        // Subsistema de óptica y Ley de Fermat (OPL)
+#include "SistemaAnimacion.hpp"     // Subsistema de animación por keyframes y reducción
 
-// --- Nuevos Subsistemas de Conciencia Espacial, Navegación y Aerodinámica ---
+// --- Nuevos Subsistemas de Conciencia Espacial, Navegación, Aerodinámica e Iluminación ---
 #include "SistemaNavegacion.hpp"
 #include "SistemaEdificios.hpp"
 #include "SistemaPercepcion.hpp"
-#include "SistemaAerodinamica.hpp"   // Subsistema universal de aerodinámica (Navier-Stokes simplificado)
+#include "SistemaAerodinamica.hpp"          // Subsistema universal de aerodinámica
+#include "SistemaModelado3D.hpp"            // Subsistema de modelado 3D y mallas editables
+#include "SistemaIluminacionVolumetrica.hpp" // Subsistema de luces volumétricas y conos de luz
 
 // --- Cabeceras ecs/ ---
 #include "Entidad.hpp"
@@ -46,7 +49,7 @@
 #include "SistemaParticulas.hpp"
 
 int main() {
-    PropiedadesVentana props("Motor 3D - Modo Editor (Mundo Abierto)", 800, 600);
+    PropiedadesVentana props("Motor 3D - Modo Editor (Volumétrica & Modelado)", 800, 600);
     std::unique_ptr<Ventana> ventana(Ventana::Crear(props));
 
     if (!ventana) {
@@ -73,30 +76,45 @@ int main() {
     SistemaFisica sistemaFisica;                 
     SistemaMundoAbierto sistemaMundoAbierto(80.0f); // Streaming de mundo abierto con radio de 80 unidades
 
-    // Instanciación de los nuevos sistemas espaciales, de edificios, percepción y aerodinámica
+    // Instanciación de los subsistemas del motor
     SistemaNavegacion sistemaNavegacion;
     SistemaEdificios sistemaEdificios;
     SistemaPercepcion sistemaPercepcion;
     SistemaAerodinamica sistemaAerodinamica(Vector3(1.5f, 0.0f, 0.5f)); // Viento global ambiental inicial
+    SistemaAnimacion sistemaAnimacion; 
+    SistemaIluminacionVolumetrica sistemaIluminacionVolumetrica; // Subsistema de luces volumétricas y haces de luz
 
-    // Definición de un medio óptico global de prueba en el mundo (ej. campo de distorsión o zona de refracción)
+    // Definición de un medio óptico global de prueba en el mundo
     SistemaOptica::MedioOptico medioOpticoGlobal(1.33f, Vector3(0.0f, 2.0f, -5.0f), 15.0f);
 
-    // Instanciamos nuestros nuevos sistemas nativos del núcleo
+    // Instanciamos sistemas nativos del núcleo
     SistemaComandos& sistemaComandos = SistemaComandos::ObtenerInstancia();
     SistemaParticulas sistemaParticulas(300); // Emisor con capacidad para 300 partículas
 
-    // --- Integración del Serializador: Intentamos cargar la escena guardada previamente ---
+    // --- Integración del Serializador: Intentamos cargar la escena o inicializar con Elementos y Luces Volumétricas ---
     if (!SerializadorEscena::CargarEscena(gestorEntidades, "escena_guardada.txt")) {
-        Entidad objetoPrincipal = gestorEntidades.CrearEntidad("ObjetoCubo");
-        gestorEntidades.AsignarTransformacion(objetoPrincipal, ComponenteTransformacion(Vector3(0.0f, 0.0f, -5.0f)));
+        // 1. Crear entidad con geometría procedural generada por el Sistema de Modelado 3D
+        Entidad objetoCuboModelado = gestorEntidades.CrearEntidad("CuboModeladoProcedural");
+        gestorEntidades.AsignarTransformacion(objetoCuboModelado, ComponenteTransformacion(Vector3(0.0f, 1.0f, -5.0f)));
+        gestorEntidades.AsignarCuerpoRigido(objetoCuboModelado, ComponenteCuerpoRigido(2.0f, true, 1.0f));
+        gestorEntidades.AsignarTensorDeformacion(objetoCuboModelado, ComponenteTensorDeformacion(150.0f));
+
+        MallaEditable mallaEditable = SistemaModelado3D::GenerarCubo(2.0f, 2.0f, 2.0f);
+
+        // 2. Crear entidad de Terreno para el mundo abierto
+        Entidad entidadTerreno = gestorEntidades.CrearEntidad("TerrenoMundoAbierto");
+        gestorEntidades.AsignarTransformacion(entidadTerreno, ComponenteTransformacion(Vector3(0.0f, -3.0f, 0.0f)));
         
-        // Asignamos capacidades utilizando los métodos base confirmados del gestor
-        gestorEntidades.AsignarCuerpoRigido(objetoPrincipal, ComponenteCuerpoRigido(2.0f, true, 1.0f));
-        gestorEntidades.AsignarTensorDeformacion(objetoPrincipal, ComponenteTensorDeformacion(150.0f));
+        ComponenteTerreno terrenoBase(64, 64, 2.0f, 30.0f);
+        terrenoBase.ModificarAltura(32, 32, 10.0f);
+
+        // 3. Crear Entidad con Foco de Luz Volumétrica (Efecto haz de luz realista tipo Blender)
+        Entidad entidadLuzVol = gestorEntidades.CrearEntidad("FocoLuzVolumetrica");
+        gestorEntidades.AsignarTransformacion(entidadLuzVol, ComponenteTransformacion(Vector3(0.0f, 5.0f, -3.0f)));
+        // Asignamos el componente de luz volumétrica con tono cálido y alta intensidad
+        gestorEntidades.AsignarComponente<ComponenteLuzVolumetrica>(entidadLuzVol, ComponenteLuzVolumetrica("LuzEscenario", Vector3(1.0f, 0.85f, 0.6f), 4.0f, 20.0f, 45.0f, 0.6f));
     }
 
-    // Ejemplo de prueba: Ejecutar un comando nativo al iniciar el motor
     sistemaComandos.EjecutarLinea("spawn CuboGeneradoPorConsola", gestorEntidades);
 
     while (ventana->EstaEjecutandose()) {
@@ -107,12 +125,9 @@ int main() {
             contexto->LimpiarPantalla();
         }
 
-        // --- Actualización de Sistemas de Lógica, Física, IA y Mundo Abierto ---
-        
         // Sincronizamos el estado del botón de depuración tensorial de la UI con el sistema físico
         sistemaFisica.EstablecerModoDepuracionTensor(sistemaUI.EstaDepuracionTensorActiva());
 
-        // Obtener entidades activas para referencias de posición
         auto entidadesActivas = gestorEntidades.ObtenerTodasLasEntidades();
         float jugadorX = 0.0f;
         float jugadorZ = 0.0f;
@@ -123,13 +138,11 @@ int main() {
                 jugadorX = trans->Posicion.X;
                 jugadorZ = trans->Posicion.Z;
 
-                // Aplicar refracción óptica basada en la Ley de Fermat sobre la velocidad/dinámica del objeto si entra al medio
                 auto cuerpoRigidoEntidad = gestorEntidades.ObtenerCuerpoRigido(entidadesActivas[0]);
                 if (cuerpoRigidoEntidad) {
                     sistemaFisica.AplicarRefraccionOpticaFisica(trans->Posicion, cuerpoRigidoEntidad->Velocidad, medioOpticoGlobal);
                 }
 
-                // Emitir partículas de prueba desde la posición de la primera entidad en cada frame
                 sistemaParticulas.EmitirParticula(
                     Vector3(trans->Posicion.X, trans->Posicion.Y, trans->Posicion.Z),
                     Vector3(0.0f, 0.5f, 0.0f),
@@ -139,27 +152,26 @@ int main() {
             }
         }
 
-        // Procesar carga y streaming de chunks/sectores para el mundo abierto basado en la posición del jugador
+        // Streaming y actualización de subsistemas
         sistemaMundoAbierto.ActualizarStreaming(gestorEntidades, jugadorX, jugadorZ);
-
-        // --- Actualización de los nuevos subsistemas de Conciencia Espacial, Navegación y Aerodinámica ---
         sistemaNavegacion.Actualizar(gestorEntidades, 0.016f);
         sistemaEdificios.ActualizarYVerificarProximidadAgentes(gestorEntidades);
         sistemaPercepcion.Actualizar(gestorEntidades);
-        sistemaAerodinamica.Actualizar(gestorEntidades, 0.016f); // Procesa fuerzas de arrastre y sustentación universal
+        sistemaAerodinamica.Actualizar(gestorEntidades, 0.016f);
+        sistemaAnimacion.Actualizar(gestorEntidades, 0.016f);
+        
+        // Actualizamos el subsistema de iluminación volumétrica para recalcular haces de luz
+        sistemaIluminacionVolumetrica.Actualizar(gestorEntidades);
 
-        sistemaFisica.Actualizar(gestorEntidades, 0.016f); // Procesa gravedad, movimientos y cálculo tensorial de impactos
+        sistemaFisica.Actualizar(gestorEntidades, 0.016f);
         SistemaScripts::Actualizar(gestorEntidades, 0.016f);
 
-        // ==========================================
-        // CICLO DE INFERENCIA DE REDES NEURONALES (IA)
-        // ==========================================
+        // Ciclo de Inferencia de Redes Neuronales (IA)
         for (const auto& entidad : entidadesActivas) {
             ComponenteRedNeuronal* redNeuronal = gestorEntidades.ObtenerComponente<ComponenteRedNeuronal>(entidad);
             ComponenteTransformacion* transformacion = gestorEntidades.ObtenerTransformacion(entidad);
             ComponenteSector* sector = gestorEntidades.ObtenerComponente<ComponenteSector>(entidad);
 
-            // Solo procesamos la red neuronal si el sector está activo en memoria (optimización de mundo abierto)
             bool sectorActivo = sector ? sector->ActivoEnMemoria : true;
 
             if (redNeuronal && redNeuronal->Activo && transformacion && sectorActivo) {
@@ -173,25 +185,19 @@ int main() {
             }
         }
 
-        // Actualizar física/vida de las partículas
         sistemaParticulas.Actualizar(0.016f);
         sistemaParticulas.Renderizar();
-
-        // Actualizar plugins externos
         gestorPlugins.ActualizarPlugins(gestorEntidades, 0.016f);
 
-        // --- Dibujar interfaz y paneles del editor ---
+        // Interfaz y Paneles del Editor
         sistemaUI.DibujarPanelEditor(gestorEntidades, jerarquiaEscena, inspector, controladorModo, sistemaRendimiento, sistemaSeleccion);
 
-        // ==========================================
-        // RENDERIZADO DE GIZMOS 3D SOBRE LA ENTIDAD SELECCIONADA
-        // ==========================================
         Entidad entidadSeleccionada = sistemaSeleccion.ObtenerEntidadSeleccionada();
         if (entidadSeleccionada.ObtenerID() != 0) {
             ComponenteTransformacion* transSeleccionada = gestorEntidades.ObtenerTransformacion(entidadSeleccionada);
             if (transSeleccionada) {
                 gizmosEditor.RenderizarGizmo3D(*transSeleccionada);
-                gizmosEditor.RenderizarDepuracionEspacial(*transSeleccionada); // Dibuja guías espaciales y de ruta
+                gizmosEditor.RenderizarDepuracionEspacial(*transSeleccionada);
             }
         }
 
