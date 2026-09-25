@@ -8,6 +8,7 @@
 #include "SistemaMundoAbierto.hpp"   // Subsistema de mundo abierto
 #include <string>
 #include <memory>
+#include <vector>
 
 // Componente para manejar la posición, rotación y escala en el mundo 3D
 struct ComponenteTransformacion {
@@ -181,4 +182,58 @@ struct ComponenteAerodinamico {
           AreaFrontal(area), 
           CoeficienteSustentacion(lift), 
           Activo(true) {}
+};
+
+// ==========================================
+// COMPONENTE ÓPTICO (LEY DE FERMAT Y REFRACCIÓN)
+// ==========================================
+
+// Componente para asignar propiedades de refracción óptica y campos de influencia a entidades específicas
+struct ComponenteOptico {
+    float IndiceRefraction;  // n (ej. Vacío = 1.0f, Agua = 1.33f, Vidrio = 1.5f)
+    float RadioInfluencia;   // Radio espacial en el que afecta la trayectoria de rayos o proyectiles
+    bool Activo;
+
+    ComponenteOptico(float n = 1.33f, float radio = 10.0f, bool activo = true)
+        : IndiceRefraction(n), RadioInfluencia(radio), Activo(activo) {}
+};
+
+// ==========================================
+// COMPONENTE DE ANIMACIÓN (KEYFRAMES, STATE MACHINES Y BLEND SPACES)
+// ==========================================
+struct KeyframeTransicion {
+    float Tiempo;
+    Vector3 Posicion;
+    Cuaternion Rotacion;
+};
+
+struct ClipAnimacion {
+    std::string Nombre;
+    float Duracion;
+    std::vector<KeyframeTransicion> Keyframes;
+};
+
+struct ComponenteAnimacion {
+    std::string NombreClip;
+    float Duracion;
+    float TiempoActual;
+    bool EnReproduccion;
+    bool EnBucle;
+
+    // Máquina de Estados y Blend Spaces integrados
+    std::string EstadoActual;
+    std::string SiguienteEstado;
+    float PesoBlend; // Para interpolación suave entre animaciones (ej. Caminar a Correr)
+    float VelocidadMezcla;
+
+    ComponenteAnimacion(const std::string& clip = "Idle", float duracion = 2.0f)
+        : NombreClip(clip),
+          Duracion(duracion),
+          TiempoActual(0.0f),
+          EnReproduccion(true),
+          EnBucle(true),
+          EstadoActual("Idle"),
+          SiguienteEstado(""),
+          PesoBlend(0.0f),
+          VelocidadMezcla(5.0f) {}
 };

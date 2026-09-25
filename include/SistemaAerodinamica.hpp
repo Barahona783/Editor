@@ -41,14 +41,13 @@ public:
         for (const auto& entidad : entidades) {
             ComponenteAerodinamico* aero = gestor.ObtenerComponente<ComponenteAerodinamico>(entidad);
             ComponenteTransformacion* trans = gestor.ObtenerTransformacion(entidad);
-            ComponenteCuerpoRigido* rigido = gestor.ObtenerComponente<ComponenteCuerpoRigido>(entidad);
+            ComponenteCuerpoRigido* rigido = gestor.ObtenerCuerpoRigido(entidad);
 
             if (!aero || !aero->Activo || !trans || !rigido || !rigido->EsDinamico) {
                 continue;
             }
 
             // Velocidad relativa considerando el movimiento de la entidad frente al viento global del mundo
-            // (En un motor completo, aquí se usaría la velocidad lineal real del cuerpo rígido)
             Vector3 velocidadVientoRelativo = m_VientoGlobal; 
             float velocidadRelativaMagnitud = std::sqrt(
                 velocidadVientoRelativo.X * velocidadVientoRelativo.X +
@@ -65,12 +64,11 @@ public:
                                              * aero->CoeficienteSustentacion * aero->AreaFrontal;
 
             // Aplicación de las fuerzas sobre los componentes físicos de la entidad
-            // (El arrastre frena en contra del viento, la sustentación actúa verticalmente en el eje Y)
             if (rigido->Masa > 0.0f) {
                 float aceleracionArrastre = fuerzaArrastreMagnitud / rigido->Masa;
                 float aceleracionSustentacion = fuerzaSustentacionMagnitud / rigido->Masa;
 
-                // Modificamos sutilmente la posición o velocidad simulada según el impacto aerodinámico universal
+                // Modificamos sutilmente la posición según el impacto aerodinámico universal
                 trans->Posicion.Y += aceleracionSustentacion * deltaTime * 0.1f;
             }
         }

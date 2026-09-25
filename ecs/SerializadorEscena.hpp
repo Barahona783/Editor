@@ -7,6 +7,9 @@
 #include "GestorEntidades.hpp"
 #include "Entidad.hpp"
 #include "Componentes.hpp"
+#include "SistemaOptica.hpp"
+#include "SistemaAnimacion.hpp"
+#include "SistemaAerodinamica.hpp"
 
 class SerializadorEscena {
 public:
@@ -42,6 +45,30 @@ public:
                 archivo << "TENSOR " << tensor->LimiteElasticidad << " " << (tensor->EstaDeformado ? 1 : 0) << "\n";
             }
 
+            // ==========================================
+            // NUEVO: Serializar Componente Óptico (Ley de Fermat)
+            // ==========================================
+            ComponenteOptico* optico = gestor.ObtenerComponente<ComponenteOptico>(e);
+            if (optico) {
+                archivo << "OPTICO " << optico->IndiceRefraction << " " << optico->RadioInfluencia << " " << (optico->Activo ? 1 : 0) << "\n";
+            }
+
+            // ==========================================
+            // NUEVO: Serializar Componente Aerodinámico
+            // ==========================================
+            ComponenteAerodinamico* aero = gestor.ObtenerComponente<ComponenteAerodinamico>(e);
+            if (aero) {
+                archivo << "AERODINAMICO " << aero->CoeficienteArrastre << " " << aero->AreaFrontal << " " << aero->CoeficienteSustentacion << " " << (aero->Activo ? 1 : 0) << "\n";
+            }
+
+            // ==========================================
+            // NUEVO: Serializar Componente de Animación
+            // ==========================================
+            ComponenteAnimacion* anim = gestor.ObtenerComponente<ComponenteAnimacion>(e);
+            if (anim) {
+                archivo << "ANIMACION " << anim->NombreClip << " " << anim->Duracion << " " << (anim->EnBucle ? 1 : 0) << "\n";
+            }
+
             archivo << "FIN_ENTIDAD\n";
         }
 
@@ -69,6 +96,23 @@ public:
         bool deformadoLeido = false;
         bool tieneTensor = false;
 
+        // Variables temporales para subsistemas nuevos
+        float indiceRefLeido = 1.33f;
+        float radioInfLeido = 10.0f;
+        bool opticoActivoLeido = true;
+        bool tieneOptico = false;
+
+        float cdLeido = 0.35f;
+        float areaLeida = 2.0f;
+        float liftLeido = -0.5f;
+        bool aeroActivoLeido = true;
+        bool tieneAero = false;
+
+        std::string nombreClipLeido = "Default";
+        float duracionAnimLeida = 5.0f;
+        bool bucleAnimLeido = true;
+        bool tieneAnim = false;
+
         while (std::getline(archivo, linea)) {
             if (linea.empty()) continue;
 
@@ -79,16 +123,16 @@ public:
             if (tipo == "ENTIDAD") {
                 uint32_t id;
                 ss >> id;
-                // Creamos la entidad base con un nombre temporal por defecto
                 entidadActual = gestor.CrearEntidad("EntidadTemporal");
                 nombreLeido = "Entidad_" + std::to_string(id);
                 tieneTransform = false;
                 tieneTensor = false;
+                tieneOptico = false;
+                tieneAero = false;
+                tieneAnim = false;
             } 
             else if (tipo == "NOMBRE") {
-                // Capturamos el resto de la línea por si el nombre contiene espacios o identificadores largos
                 std::getline(ss, nombreLeido);
-                // Quitamos el espacio inicial si lo hubiera después de "NOMBRE "
                 if (!nombreLeido.empty() && nombreLeido[0] == ' ') {
                     nombreLeido = nombreLeido.substr(1);
                 }
@@ -111,12 +155,27 @@ public:
                 deformadoLeido = (defInt != 0);
                 tieneTensor = true;
             }
+            else if (tipo == "OPTICO") {
+                int activoInt = 1;
+                ss >> indiceRefLeido >> radioInfLeido >> activoInt;
+                opticoActivoLeido = (activoInt != 0);
+                tieneOptico = true;
+            }
+            else if (tipo == "AERODINAMICO") {
+                int activoInt = 1;
+                ss >> cdLeido >> areaLeida >> liftLeido >> activoInt;
+                aeroActivoLeido = (activoInt != 0);
+                tieneAero = true;
+            }
+            else if (tipo == "ANIMACION") {
+                int bucleInt = 1;
+                ss >> nombreClipLeido >> duracionAnimLeida >> bucleInt;
+                bucleAnimLeido = (bucleInt != 0);
+                tieneAnim = true;
+            }
             else if (tipo == "FIN_ENTIDAD") {
                 if (entidadActual.ObtenerID() != 0 && tieneTransform) {
-                    // Asignamos la transformación leída a la entidad recién creada
                     gestor.AsignarTransformacion(entidadActual, ComponenteTransformacion(posLeida));
-                    
-                    // Si el componente ya existe de forma interna, aseguramos escala también si aplica
                     ComponenteTransformacion* compTrans = gestor.ObtenerTransformacion(entidadActual);
                     if (compTrans) {
                         compTrans->Posicion = posLeida;
@@ -124,13 +183,32 @@ public:
                     }
                 }
 
-                // Asignar el componente tensor cargado si existía en el archivo
                 if (entidadActual.ObtenerID() != 0 && tieneTensor) {
                     gestor.AsignarTensorDeformacion(entidadActual, ComponenteTensorDeformacion(elasticidadLeida));
                     ComponenteTensorDeformacion* compTensor = gestor.ObtenerComponente<ComponenteTensorDeformacion>(entidadActual);
                     if (compTensor) {
                         compTensor->LimiteElasticidad = elasticidadLeida;
                         compTensor->EstaDeformado = deformadoLeido;
+                    }
+                }
+
+                if (entidadActual.ObtenerID() != 0 && tieneOptico) {
+                    gestor.AsignarComponente<ComponenteOptico>(entidadActual, ComponenteOptico(indiceRefLeido, radioInfLeido, opticoActivoLeido));
+                }
+
+                if (entidadActual.ObtenerID() != 0 && tieneAero) {
+                    gestor.AsignarComponente<ComponenteAerodinamico>(entidadActual, ComponenteAerodinamico(cdLeido, areaLeida, liftLeido));
+                    ComponenteAerodinamico* compAero = gestor.ObtenerComponente<ComponenteAerodinamico>(entidadActual);
+                    if (compAero) {
+                        compAero->Activo = aeroActivoLeido;
+                    }
+                }
+
+                if (entidadActual.ObtenerID() != 0 && tieneAnim) {
+                    gestor.AsignarComponente<ComponenteAnimacion>(entidadActual, ComponenteAnimacion(nombreClipLeido, duracionAnimLeida));
+                    ComponenteAnimacion* compAnim = gestor.ObtenerComponente<ComponenteAnimacion>(entidadActual);
+                    if (compAnim) {
+                        compAnim->EnBucle = bucleAnimLeido;
                     }
                 }
 

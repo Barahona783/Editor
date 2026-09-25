@@ -19,14 +19,16 @@ class SistemaUI {
 private:
     bool m_MostrarEditor;
     bool m_MostrarDepuracionTensor;
-    bool m_MostrarDepuracionMundo; // <-- NUEVO: Control para visualizar el panel de navegación y edificios
+    bool m_MostrarDepuracionMundo; 
+    bool m_MostrarDepuracionOpticaAnim; // <-- NUEVO: Control para visualizar el panel unificado de Óptica y Animación
 
     VentanaFlotante m_PanelJerarquia;
     VentanaFlotante m_PanelInspector;
     VentanaFlotante m_PanelConsola;
     VentanaFlotante m_PanelNodos;
     VentanaFlotante m_PanelTensor;
-    VentanaFlotante m_PanelMundo; // <-- NUEVO: Panel flotante para control espacial y de edificios
+    VentanaFlotante m_PanelMundo; 
+    VentanaFlotante m_PanelOpticaAnim; // <-- NUEVO: Panel flotante para línea de tiempo y óptica (Ley de Fermat)
 
     EditorNodos m_GestorNodos;
 
@@ -35,12 +37,14 @@ public:
         : m_MostrarEditor(true),
           m_MostrarDepuracionTensor(false),
           m_MostrarDepuracionMundo(false),
+          m_MostrarDepuracionOpticaAnim(false),
           m_PanelJerarquia("Jerarquia", 10.0f, 45.0f, 270.0f, 475.0f),
           m_PanelInspector("Inspector", 1000.0f, 45.0f, 270.0f, 475.0f),
           m_PanelConsola("Consola de Diagnostico", 10.0f, 530.0f, 1260.0f, 180.0f),
           m_PanelNodos("Editor de Nodos (Visual Scripting)", 300.0f, 100.0f, 680.0f, 400.0f),
           m_PanelTensor("Analisis Tensorial (Circulo de Mohr)", 310.0f, 120.0f, 420.0f, 320.0f),
-          m_PanelMundo("Conciencia Espacial y Navegacion", 310.0f, 450.0f, 420.0f, 220.0f) {}
+          m_PanelMundo("Conciencia Espacial y Navegacion", 310.0f, 450.0f, 420.0f, 220.0f),
+          m_PanelOpticaAnim("Optica (Fermat) y Animacion Keyframes", 740.0f, 120.0f, 240.0f, 220.0f) {}
 
     void AlternarModoEditor() { m_MostrarEditor = !m_MostrarEditor; }
     bool EstaModoEditorActivo() const { return m_MostrarEditor; }
@@ -50,6 +54,9 @@ public:
 
     void AlternarDepuracionMundo() { m_MostrarDepuracionMundo = !m_MostrarDepuracionMundo; }
     bool EstaDepuracionMundoActiva() const { return m_MostrarDepuracionMundo; }
+
+    void AlternarDepuracionOpticaAnim() { m_MostrarDepuracionOpticaAnim = !m_MostrarDepuracionOpticaAnim; }
+    bool EstaDepuracionOpticaAnimActiva() const { return m_MostrarDepuracionOpticaAnim; }
 
     EditorNodos& ObtenerGestorNodos() { return m_GestorNodos; }
 
@@ -85,6 +92,15 @@ public:
         }
         clicAnteriorMundo = mousePresionado;
 
+        // 3. NUEVO: Botón Óptica y Animación Keyframes (X: 780-805, Y: 10-25)
+        static bool clicAnteriorOpticaAnim = false;
+        if (mousePresionado && !clicAnteriorOpticaAnim) {
+            if (mouseX >= 780.0f && mouseX <= 805.0f && mouseY >= 10.0f && mouseY <= 25.0f) {
+                AlternarDepuracionOpticaAnim();
+            }
+        }
+        clicAnteriorOpticaAnim = mousePresionado;
+
         m_PanelJerarquia.ComprobarInicioArrastre(mouseX, mouseY, mousePresionado);
         m_PanelJerarquia.ActualizarArrastre(mouseX, mouseY, mousePresionado);
 
@@ -114,6 +130,11 @@ public:
         if (m_MostrarDepuracionMundo) {
             m_PanelMundo.ComprobarInicioArrastre(mouseX, mouseY, mousePresionado);
             m_PanelMundo.ActualizarArrastre(mouseX, mouseY, mousePresionado);
+        }
+
+        if (m_MostrarDepuracionOpticaAnim) {
+            m_PanelOpticaAnim.ComprobarInicioArrastre(mouseX, mouseY, mousePresionado);
+            m_PanelOpticaAnim.ActualizarArrastre(mouseX, mouseY, mousePresionado);
         }
 
         glMatrixMode(GL_PROJECTION);
@@ -171,6 +192,19 @@ public:
             glVertex2f(765.0f, 10.0f);
             glVertex2f(765.0f, 25.0f);
             glVertex2f(740.0f, 25.0f);
+        glEnd();
+
+        // NUEVO: Indicador de Óptica y Animación (Cuadrado Morado/Magenta)
+        if (m_MostrarDepuracionOpticaAnim) {
+            glColor3f(0.7f, 0.2f, 0.9f);
+        } else {
+            glColor3f(0.3f, 0.3f, 0.4f);
+        }
+        glBegin(GL_QUADS);
+            glVertex2f(780.0f, 10.0f);
+            glVertex2f(805.0f, 10.0f);
+            glVertex2f(805.0f, 25.0f);
+            glVertex2f(780.0f, 25.0f);
         glEnd();
 
         // Panel Jerarquia
@@ -285,7 +319,7 @@ public:
             glEnd();
         }
 
-        // --- NUEVO: Panel de Conciencia Espacial y Navegación (Waypoints y Edificios) ---
+        // Panel de Conciencia Espacial y Navegación (Waypoints y Edificios)
         if (m_MostrarDepuracionMundo) {
             glColor4f(0.06f, 0.08f, 0.10f, 0.92f);
             glBegin(GL_QUADS);
@@ -303,23 +337,58 @@ public:
                 glVertex2f(m_PanelMundo.X, m_PanelMundo.Y + 25.0f);
             glEnd();
 
-            // Dibujo esquemático de cuadrícula de navegación en el panel flotante
             float gridX = m_PanelMundo.X + 20.0f;
             float gridY = m_PanelMundo.Y + 45.0f;
             glColor3f(0.2f, 0.6f, 0.8f);
             glBegin(GL_LINES);
-                // Líneas guía horizontales y verticales simulando un grafo NavMesh
                 glVertex2f(gridX, gridY + 50.0f); glVertex2f(gridX + 120.0f, gridY + 50.0f);
                 glVertex2f(gridX + 60.0f, gridY); glVertex2f(gridX + 60.0f, gridY + 100.0f);
             glEnd();
             
-            // Nodos simulados
             glColor3f(0.9f, 0.9f, 0.2f);
             glBegin(GL_QUADS);
                 glVertex2f(gridX + 55.0f, gridY + 45.0f);
                 glVertex2f(gridX + 65.0f, gridY + 45.0f);
                 glVertex2f(gridX + 65.0f, gridY + 55.0f);
                 glVertex2f(gridX + 55.0f, gridY + 55.0f);
+            glEnd();
+        }
+
+        // --- NUEVO: Panel de Óptica (Ley de Fermat) y Animación por Keyframes ---
+        if (m_MostrarDepuracionOpticaAnim) {
+            glColor4f(0.08f, 0.05f, 0.10f, 0.92f);
+            glBegin(GL_QUADS);
+                glVertex2f(m_PanelOpticaAnim.X, m_PanelOpticaAnim.Y);
+                glVertex2f(m_PanelOpticaAnim.X + m_PanelOpticaAnim.Ancho, m_PanelOpticaAnim.Y);
+                glVertex2f(m_PanelOpticaAnim.X + m_PanelOpticaAnim.Ancho, m_PanelOpticaAnim.Y + m_PanelOpticaAnim.Alto);
+                glVertex2f(m_PanelOpticaAnim.X, m_PanelOpticaAnim.Y + m_PanelOpticaAnim.Alto);
+            glEnd();
+            
+            glColor4f(0.30f, 0.10f, 0.40f, 0.95f);
+            glBegin(GL_QUADS);
+                glVertex2f(m_PanelOpticaAnim.X, m_PanelOpticaAnim.Y);
+                glVertex2f(m_PanelOpticaAnim.X + m_PanelOpticaAnim.Ancho, m_PanelOpticaAnim.Y);
+                glVertex2f(m_PanelOpticaAnim.X + m_PanelOpticaAnim.Ancho, m_PanelOpticaAnim.Y + 25.0f);
+                glVertex2f(m_PanelOpticaAnim.X, m_PanelOpticaAnim.Y + 25.0f);
+            glEnd();
+
+            // Dibujo esquemático de línea de tiempo de keyframes y curva de refracción óptica
+            float timelineX = m_PanelOpticaAnim.X + 20.0f;
+            float timelineY = m_PanelOpticaAnim.Y + 50.0f;
+            
+            glColor3f(0.8f, 0.4f, 0.9f);
+            glBegin(GL_LINES);
+                // Eje de tiempo
+                glVertex2f(timelineX, timelineY + 40.0f); 
+                glVertex2f(timelineX + 200.0f, timelineY + 40.0f);
+            glEnd();
+
+            // Fotogramas clave simulados (Keyframes)
+            glColor3f(1.0f, 0.8f, 0.2f);
+            glBegin(GL_QUADS);
+                glVertex2f(timelineX + 20.0f,  timelineY + 35.0f); glVertex2f(timelineX + 26.0f,  timelineY + 35.0f); glVertex2f(timelineX + 26.0f,  timelineY + 45.0f); glVertex2f(timelineX + 20.0f,  timelineY + 45.0f);
+                glVertex2f(timelineX + 90.0f,  timelineY + 35.0f); glVertex2f(timelineX + 96.0f,  timelineY + 35.0f); glVertex2f(timelineX + 96.0f,  timelineY + 45.0f); glVertex2f(timelineX + 90.0f,  timelineY + 45.0f);
+                glVertex2f(timelineX + 170.0f, timelineY + 35.0f); glVertex2f(timelineX + 176.0f, timelineY + 35.0f); glVertex2f(timelineX + 176.0f, timelineY + 45.0f); glVertex2f(timelineX + 170.0f, timelineY + 45.0f);
             glEnd();
         }
 

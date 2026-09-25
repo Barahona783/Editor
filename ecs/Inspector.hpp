@@ -3,6 +3,9 @@
 #include <cstdint>
 #include "GestorEntidades.hpp"
 #include "Componentes.hpp"
+#include "SistemaOptica.hpp"
+#include "SistemaAerodinamica.hpp"
+#include "SistemaAnimacion.hpp"
 
 class Inspector {
 public:
@@ -67,10 +70,38 @@ public:
         }
 
         // ==========================================
-        // NUEVA FUNCIÓN INTEGRADA DIRECTAMENTE AQUÍ:
+        // INSPECCIÓN DE SUBSISTEMAS NUEVOS (ÓPTICA, AERODINÁMICA Y ANIMACIÓN)
         // ==========================================
-        // (Aquí es donde agregamos las propiedades de material/iluminación 
-        // sin alterar ninguna de tus líneas anteriores de nombres, transformaciones o tensores).
+        ComponenteOptico* optico = gestor.ObtenerComponente<ComponenteOptico>(entidad);
+        if (optico) {
+            std::cout << "[Componente Optico - Fermat]\n";
+            std::cout << "  Indice Refraccion (n) : " << optico->IndiceRefraction << "\n";
+            std::cout << "  Radio de Influencia   : " << optico->RadioInfluencia << "\n";
+            std::cout << "  Activo                : " << (optico->Activo ? "SI" : "NO") << "\n";
+        }
+
+        ComponenteAerodinamico* aero = gestor.ObtenerComponente<ComponenteAerodinamico>(entidad);
+        if (aero) {
+            std::cout << "[Componente Aerodinamico]\n";
+            std::cout << "  Coef. Arrastre (Cd)   : " << aero->CoeficienteArrastre << "\n";
+            std::cout << "  Area Frontal          : " << aero->AreaFrontal << " m^2\n";
+            std::cout << "  Sustentacion (Lift)   : " << aero->CoeficienteSustentacion << "\n";
+            std::cout << "  Activo                : " << (aero->Activo ? "SI" : "NO") << "\n";
+        }
+
+        ComponenteAnimacion* anim = gestor.ObtenerComponente<ComponenteAnimacion>(entidad);
+        if (anim) {
+            std::cout << "[Componente Animacion Keyframes]\n";
+            std::cout << "  Clip Actual           : " << anim->NombreClip << "\n";
+            std::cout << "  Duracion Total        : " << anim->Duracion << "s\n";
+            std::cout << "  Tiempo Transcurrido   : " << anim->TiempoActual << "s\n";
+            std::cout << "  Reproduciendo         : " << (anim->EnReproduccion ? "SI" : "NO") << "\n";
+            std::cout << "  Bucle                 : " << (anim->EnBucle ? "SI" : "NO") << "\n";
+        }
+
+        // ==========================================
+        // MATERIAL Y SHADERS (PRESERVADO DE TU CÓDIGO)
+        // ==========================================
         std::cout << "[Material y Shaders - Integrado]\n";
         std::cout << "  Shader Activo: PBR_Standard_Tensor\n";
         std::cout << "  Reflectividad: 0.75\n";
