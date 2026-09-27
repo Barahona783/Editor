@@ -7,6 +7,9 @@
 #include "Componentes.hpp"
 #include "GestorEntidades.hpp"
 
+// ==========================================
+// SISTEMA DE SCRIPTING VISUAL (Nodos / Blueprints)
+// ==========================================
 struct PinNodo {
     std::string Nombre;
     bool EsEntrada; // true = input pin, false = output pin
@@ -59,7 +62,9 @@ public:
         nuevoNodo.TipoAccion = tipo;
         m_Nodos.push_back(nuevoNodo);
         
+        #ifdef _DEBUG
         std::cout << "[EditorNodos] Nodo creado: " << titulo << " (ID: " << nuevoNodo.ID << ")\n";
+        #endif
         return nuevoNodo.ID;
     }
 
@@ -75,7 +80,9 @@ public:
 
     void ConectarPines(int origenID, int pinOrigenIdx, int destinoID, int pinDestinoIdx) {
         m_Conexiones.push_back({ origenID, pinOrigenIdx, destinoID, pinDestinoIdx });
+        #ifdef _DEBUG
         std::cout << "[EditorNodos] Conexión establecida entre nodo " << origenID << " y nodo " << destinoID << "\n";
+        #endif
     }
 
     const std::vector<NodoVisual>& ObtenerNodos() const {
@@ -90,7 +97,9 @@ public:
         m_Nodos.clear();
         m_Conexiones.clear();
         m_SiguienteID = 1;
+        #ifdef _DEBUG
         std::cout << "[EditorNodos] Red de nodos limpiada.\n";
+        #endif
     }
 
     // =========================================================================
@@ -113,7 +122,7 @@ public:
                 }
             }
             else if (nodo.TipoAccion == "ModificarTensor") {
-                // Interactúa con el subsistema tensorial avanzado que integramos previamente
+                // Interactúa con el subsistema tensorial avanzado del motor
                 ComponenteTensorDeformacion* tensor = gestor.ObtenerTensorDeformacion(entidadObjetivo);
                 if (tensor) {
                     Vector3 impactoSimulado(nodo.ParametroFloat, nodo.ParametroFloat * 1.5f, 0.0f);

@@ -15,7 +15,6 @@ public:
 
         for (const auto& entidad : entidades) {
             ComponenteAnimacion* anim = gestor.ObtenerComponente<ComponenteAnimacion>(entidad);
-            ComponenteTransformacion* trans = gestor.ObtenerTransformacion(entidad);
 
             if (!anim || !anim->EnReproduccion) {
                 continue;
@@ -27,7 +26,7 @@ public:
             // Manejo de bucles (looping) del clip activo
             if (anim->TiempoActual >= anim->Duracion) {
                 if (anim->EnBucle) {
-                    anim->TiempoActual = fmod(anim->TiempoActual, anim->Duracion);
+                    anim->TiempoActual = std::fmod(anim->TiempoActual, anim->Duracion);
                 } else {
                     anim->TiempoActual = anim->Duracion;
                     anim->EnReproduccion = false;

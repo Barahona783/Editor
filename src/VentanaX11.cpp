@@ -1,6 +1,7 @@
+#pragma once
 #if defined(__linux__)
 #include "Ventana.hpp"
-#include "ContextoOpenGLLinux.cpp"
+#include "ContextoOpenGLLinux.hpp"
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <iostream>
@@ -15,10 +16,12 @@ private:
     ContextoGrafico* m_ContextoGrafico;
 
 public:
-    VentanaX11(const PropiedadesVentana& propiedades) : m_Datos(propiedades), m_EstaEjecutandose(true) {
+    VentanaX11(const PropiedadesVentana& propiedades) 
+        : m_PantallaServidor(nullptr), m_VentanaID(0), m_MensajeEliminar(0), m_Datos(propiedades), m_EstaEjecutandose(true), m_ContextoGrafico(nullptr) {
+        
         m_PantallaServidor = XOpenDisplay(NULL);
         if (!m_PantallaServidor) {
-            std::cerr << "Error al abrir la pantalla de X11\n";
+            std::cerr << "[VentanaX11] Error crítico: No se pudo abrir la pantalla de X11." << std::endl;
             m_EstaEjecutandose = false;
             return;
         }
@@ -33,32 +36,59 @@ public:
             WhitePixel(m_PantallaServidor, pantalla)
         );
 
+        if (!m_VentanaID) {
+            std::cerr << "[VentanaX11] Error crítico: No se pudo crear la ventana simple en X11." << std::endl;
+            XCloseDisplay(m_PantallaServidor);
+            m_PantallaServidor = nullptr;
+            m_EstaEjecutandose = false;
+            return;
+        }
+
+        // Configuración del título y eventos de entrada de la ventana
         XStoreName(m_PantallaServidor, m_VentanaID, m_Datos.Titulo.c_str());
         XSelectInput(m_PantallaServidor, m_VentanaID, ExposureMask | KeyPressMask | StructureNotifyMask);
         XMapWindow(m_PantallaServidor, m_VentanaID);
 
+        // Habilitar la intercepción del botón de cierre de la ventana (la 'X')
         m_MensajeEliminar = XInternAtom(m_PantallaServidor, "WM_DELETE_WINDOW", False);
         XSetWMProtocols(m_PantallaServidor, m_VentanaID, &m_MensajeEliminar, 1);
 
+        // Inicialización segura del Contexto Gráfico de Linux (GLX)
         m_ContextoGrafico = new ContextoOpenGLLinux(m_PantallaServidor, m_VentanaID);
-        m_ContextoGrafico->Inicializar();
-    }
-
-    ~VentanaX11() override {
-        delete m_ContextoGrafico;
-        if (m_PantallaServidor) {
-            XDestroyWindow(m_PantallaServidor, m_VentanaID);
-            XCloseDisplay(m_PantallaServidor);
+        if (!m_ContextoGrafico->Inicializar()) {
+            std::cerr << "[VentanaX11] Error crítico: Falló la inicialización del contexto OpenGL en Linux." << std::endl;
         }
     }
 
+    ~VentanaX11() override {
+        // 1. Primero se libera el contexto gráfico de OpenGL de manera limpia
+        if (m_ContextoGrafico) {
+            delete m_ContextoGrafico;
+            m_ContextoGrafico = nullptr;
+        }
+
+        // 2. Después se destruye la ventana de X11 y se cierra la conexión con el servidor gráfico
+        if (m_PantallaServidor) {
+            if (m_VentanaID) {
+                XDestroyWindow(m_PantallaServidor, m_VentanaID);
+                m_VentanaID = 0;
+            }
+            XCloseDisplay(m_PantallaServidor);
+            m_PantallaServidor = nullptr;
+        }
+
+        std::cout << "[VentanaX11] Ventana X11 y recursos cerrados correctamente." << std::endl;
+    }
+
     void AlActualizar() override {
+        if (!m_PantallaServidor) return;
+
         while (XPending(m_PantallaServidor) > 0) {
             XEvent evento;
             XNextEvent(m_PantallaServidor, &evento);
 
             if (evento.type == ClientMessage) {
-                if ((Atom)evento.xclient.data.l[0] == m_MensajeEliminar) {
+                if (static_cast<Atom>(evento.xclient.data.l[0]) == m_MensajeEliminar) {
                     m_EstaEjecutandose = false;
                 }
             } else if (evento.type == ConfigureNotify) {

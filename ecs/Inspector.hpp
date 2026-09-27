@@ -7,6 +7,9 @@
 #include "SistemaAerodinamica.hpp"
 #include "SistemaAnimacion.hpp"
 
+// ==========================================
+// INSPECTOR DE ENTIDADES Y COMPONENTES DEL EDITOR
+// ==========================================
 class Inspector {
 public:
     static void MostrarInspector(GestorEntidades& gestor, Entidad entidad) {
@@ -25,12 +28,14 @@ public:
         std::cout << "  INSPECTOR DE ENTIDAD [" << idEntidad << "]\n";
         std::cout << "====================================\n";
 
+        // 1. Nombre / Etiqueta
         ComponenteNombre* nombre = gestor.ObtenerNombre(entidad);
         if (nombre) {
             std::cout << "[Nombre]\n";
             std::cout << "  Etiqueta : " << nombre->Nombre << "\n";
         }
 
+        // 2. Transformación Espacial
         ComponenteTransformacion* transform = gestor.ObtenerTransformacion(entidad);
         if (transform) {
             std::cout << "[Transformacion]\n";
@@ -38,6 +43,7 @@ public:
             std::cout << "  Escala   : (" << transform->Escala.X << ", " << transform->Escala.Y << ", " << transform->Escala.Z << ")\n";
         }
 
+        // 3. Colisiones AABB
         ComponenteColisionador* colision = gestor.ObtenerCajaColision(entidad);
         if (colision) {
             std::cout << "[Caja de Colision]\n";
@@ -70,7 +76,7 @@ public:
         }
 
         // ==========================================
-        // INSPECCIÓN DE SUBSISTEMAS NUEVOS (ÓPTICA, AERODINÁMICA Y ANIMACIÓN)
+        // INSPECCIÓN DE SUBSISTEMAS (ÓPTICA, AERODINÁMICA Y ANIMACIÓN)
         // ==========================================
         ComponenteOptico* optico = gestor.ObtenerComponente<ComponenteOptico>(entidad);
         if (optico) {
@@ -100,9 +106,9 @@ public:
         }
 
         // ==========================================
-        // MATERIAL Y SHADERS (PRESERVADO DE TU CÓDIGO)
+        // MATERIAL Y SHADERS
         // ==========================================
-        std::cout << "[Material y Shaders - Integrado]\n";
+        std::cout << "[Material y Shaders]\n";
         std::cout << "  Shader Activo: PBR_Standard_Tensor\n";
         std::cout << "  Reflectividad: 0.75\n";
 

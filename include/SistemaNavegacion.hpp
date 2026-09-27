@@ -6,6 +6,7 @@
 #include <iostream>
 #include "Entidad.hpp"
 #include "Componentes.hpp"
+#include "GestorEntidades.hpp"
 
 // Estructura que representa un nodo de ruta en el mundo abierto (Calles/Aceras)
 struct NodoRuta {
@@ -24,7 +25,7 @@ struct ComponenteNavegacionAgente {
 };
 
 // Componente para identificar edificios con puntos de entrada y salida lógicos
-struct ComponenteEdificioInteractivo {
+struct ComponenteEdificioInteractivoNavegacion {
     std::string NombreEdificio;
     Vector3 PuertaEntrada; // Posición exacta de acceso exterior
     Vector3 PuntoInterior; // Posición de llegada al entrar al edificio
@@ -84,13 +85,13 @@ public:
 
     // Actualiza el desplazamiento de los agentes (NPCs/Vehículos) a lo largo del grafo de nodos
     void Actualizar(GestorEntidades& gestor, float deltaTime) {
-        // Obtenemos todas las entidades para procesar las que tengan navegación y transformación
         const auto& entidades = gestor.ObtenerTodasLasEntidades();
 
         for (const auto& entidad : entidades) {
             ComponenteTransformacion* trans = gestor.ObtenerTransformacion(entidad);
-            // Simulación de evaluación de movimiento vectorial hacia el nodo destino
-            if (trans && !m_RedNodos.empty()) {
+            ComponenteNavegacionAgente* agente = gestor.ObtenerComponente<ComponenteNavegacionAgente>(entidad);
+
+            if (trans && agente && agente->EnMovimiento && !m_RedNodos.empty()) {
                 // Lógica de avance guiado por el grafo de navegación
             }
         }

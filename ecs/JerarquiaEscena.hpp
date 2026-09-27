@@ -4,6 +4,9 @@
 #include <string>
 #include <iostream>
 
+// ==========================================
+// GESTOR DE JERARQUÍA Y ÁRBOL DE ESCENA
+// ==========================================
 class JerarquiaEscena {
 private:
     Entidad m_EntidadSeleccionada;
@@ -11,18 +14,28 @@ private:
 public:
     JerarquiaEscena() : m_EntidadSeleccionada(0) {}
 
+    // Selecciona una entidad específica en la jerarquía del mundo
     void SeleccionarEntidad(Entidad entidad) {
         m_EntidadSeleccionada = entidad;
     }
 
+    // Devuelve la entidad actualmente seleccionada en el editor
     Entidad ObtenerEntidadSeleccionada() const {
         return m_EntidadSeleccionada;
     }
 
-    // Se mantiene intacto todo el sistema de consola y se prepara para el renderizado UI
+    // Renderiza el árbol completo de la escena por consola (preparado para integración futura con UI gráfica)
     void RenderizarArbol(GestorEntidades& gestor) {
         const auto& entidades = gestor.ObtenerTodasLasEntidades();
-        std::cout << "--- JERARQUIA DE LA ESCENA ---\n";
+        
+        std::cout << "\n====================================\n";
+        std::cout << "  JERARQUIA DE LA ESCENA\n";
+        std::cout << "====================================\n";
+        
+        if (entidades.empty()) {
+            std::cout << "  (Escena vacia)\n";
+        }
+
         for (const auto& e : entidades) {
             auto nom = gestor.ObtenerNombre(e);
             std::string etiqueta = nom ? nom->Nombre : "Entidad_" + std::to_string(e.ObtenerID());
@@ -33,5 +46,6 @@ public:
                 std::cout << "   [" << e.ObtenerID() << "] " << etiqueta << "\n";
             }
         }
+        std::cout << "====================================\n\n";
     }
 };

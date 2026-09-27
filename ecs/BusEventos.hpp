@@ -7,6 +7,7 @@
 #include <any>
 #include <typeindex>
 #include <iostream>
+#include <mutex>
 
 class BusEventos {
 private:
@@ -21,6 +22,7 @@ private:
     };
 
     std::unordered_map<std::type_index, std::unique_ptr<ICallbackLista>> m_Suscriptores;
+    mutable std::mutex m_MutexBus; // Garantiza seguridad ante concurrencia multihilo en el motor
 
     BusEventos() = default;
 
@@ -31,10 +33,12 @@ public:
         return instancia;
     }
 
-    // Suscribirse a un tipo de evento específico
+    // Suscribirse a un tipo de evento específico de forma segura para hilos
     template<typename T>
     void Suscribir(std::function<void(const T&)> callback) {
+        std::lock_guard<std::mutex> bloqueo(m_MutexBus);
         std::type_index tipo(typeid(T));
+        
         if (m_Suscriptores.find(tipo) == m_Suscriptores.end()) {
             m_Suscriptores[tipo] = std::make_unique<CallbackLista<T>>();
         }
@@ -43,16 +47,25 @@ public:
         lista->callbacks.push_back(callback);
     }
 
-    // Disparar un evento de manera inmediata a todos los suscriptores
+    // Disparar un evento de manera inmediata a todos los suscriptores de forma segura
     template<typename T>
     void Publicar(const T& evento) {
-        std::type_index tipo(typeid(T));
-        auto it = m_Suscriptores.find(tipo);
-        if (it != m_Suscriptores.end()) {
-            auto* lista = static_cast<CallbackLista<T>*>(it->second.get());
-            for (auto& callback : lista->callbacks) {
-                callback(evento);
+        // Bloqueamos la obtención de la lista, pero copiamos los callbacks localmente 
+        // para evitar deadlocks si un callback decide suscribir o publicar otro evento de inmediato.
+        std::vector<std::function<void(const T&)>> callbacksLocales;
+        {
+            std::lock_guard<std::mutex> bloqueo(m_MutexBus);
+            std::type_index tipo(typeid(T));
+            auto it = m_Suscriptores.find(tipo);
+            if (it != m_Suscriptores.end()) {
+                auto* lista = static_cast<CallbackLista<T>*>(it->second.get());
+                callbacksLocales = lista->callbacks;
             }
+        }
+
+        // Ejecución de los callbacks fuera de la sección crítica del mutex principal
+        for (const auto& callback : callbacksLocales) {
+            callback(evento);
         }
     }
 

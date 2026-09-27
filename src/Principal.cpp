@@ -12,17 +12,22 @@
 #include "Malla.hpp"
 #include "Luz3D.hpp"
 #include "RedNeuronal.hpp"          // Subsistema de red neuronal
-#include "SistemaMundoAbierto.hpp"   // Subsistema de streaming para mundo abierto
+#include "SistemaMundoAbierto.hpp"   // Subsistema actualizado de streaming para mundo abierto
 #include "SistemaOptica.hpp"        // Subsistema de óptica y Ley de Fermat (OPL)
 #include "SistemaAnimacion.hpp"     // Subsistema de animación por keyframes y reducción
 
-// --- Nuevos Subsistemas de Conciencia Espacial, Navegación, Aerodinámica e Iluminación ---
+// --- Subsistemas de Conciencia Espacial, Navegación, Aerodinámica, Iluminación, Atmósfera y Cámara ---
 #include "SistemaNavegacion.hpp"
 #include "SistemaEdificios.hpp"
 #include "SistemaPercepcion.hpp"
 #include "SistemaAerodinamica.hpp"          // Subsistema universal de aerodinámica
 #include "SistemaModelado3D.hpp"            // Subsistema de modelado 3D y mallas editables
 #include "SistemaIluminacionVolumetrica.hpp" // Subsistema de luces volumétricas y conos de luz
+#include "SistemaCieloAtmosferico.hpp"       // Subsistema de cielo atmosférico y gradientes celestes
+#include "SistemaControlCamara.hpp"          // Subsistema de control de cámaras estilo Blender (0, Ctrl+0, Ctrl+Alt+0)
+#include "SistemaPlanoArquitectonico.hpp"    // Subsistema de planos arquitectónicos y CAD (BIM)
+#include "SistemaProporcionesRig.hpp"        // Subsistema de proporciones corporales y rig esquelético
+#include "SistemaTacticoFlanqueo.hpp"        // Subsistema táctico de flanqueo, coberturas y blockout
 
 // --- Cabeceras ecs/ ---
 #include "Entidad.hpp"
@@ -49,7 +54,7 @@
 #include "SistemaParticulas.hpp"
 
 int main() {
-    PropiedadesVentana props("Motor 3D - Modo Editor (Volumétrica & Modelado)", 800, 600);
+    PropiedadesVentana props("Motor 3D - Modo Editor (Mundo Abierto Espacial & Camara)", 800, 600);
     std::unique_ptr<Ventana> ventana(Ventana::Crear(props));
 
     if (!ventana) {
@@ -74,7 +79,7 @@ int main() {
     GizmosEditor gizmosEditor;                  
     GestorPlugins gestorPlugins;
     SistemaFisica sistemaFisica;                 
-    SistemaMundoAbierto sistemaMundoAbierto(80.0f); // Streaming de mundo abierto con radio de 80 unidades
+    SistemaMundoAbierto sistemaMundoAbierto(80.0f); // Streaming de mundo abierto con radio principal de 80 unidades
 
     // Instanciación de los subsistemas del motor
     SistemaNavegacion sistemaNavegacion;
@@ -83,6 +88,11 @@ int main() {
     SistemaAerodinamica sistemaAerodinamica(Vector3(1.5f, 0.0f, 0.5f)); // Viento global ambiental inicial
     SistemaAnimacion sistemaAnimacion; 
     SistemaIluminacionVolumetrica sistemaIluminacionVolumetrica; // Subsistema de luces volumétricas y haces de luz
+    SistemaCieloAtmosferico sistemaCieloAtmosferico;             // Subsistema de cielo y atmósfera estilizada
+    SistemaControlCamara sistemaControlCamara;                   // Subsistema de atajos de cámara estilo Blender
+    SistemaPlanoArquitectonico sistemaPlanoArquitectonico;       // Subsistema de planos y diseño arquitectónico CAD
+    SistemaProporcionesRig sistemaProporcionesRig;               // Subsistema de proporciones anatómicas y rigging esquelético
+    SistemaTacticoFlanqueo sistemaTacticoFlanqueo;               // Subsistema táctico de flanqueo, coberturas y blockout
 
     // Definición de un medio óptico global de prueba en el mundo
     SistemaOptica::MedioOptico medioOpticoGlobal(1.33f, Vector3(0.0f, 2.0f, -5.0f), 15.0f);
@@ -91,28 +101,59 @@ int main() {
     SistemaComandos& sistemaComandos = SistemaComandos::ObtenerInstancia();
     SistemaParticulas sistemaParticulas(300); // Emisor con capacidad para 300 partículas
 
-    // --- Integración del Serializador: Intentamos cargar la escena o inicializar con Elementos y Luces Volumétricas ---
+    // --- Integración del Serializador: Intentamos cargar la escena o inicializar con Elementos, Sectores y Cámaras ---
     if (!SerializadorEscena::CargarEscena(gestorEntidades, "escena_guardada.txt")) {
         // 1. Crear entidad con geometría procedural generada por el Sistema de Modelado 3D
         Entidad objetoCuboModelado = gestorEntidades.CrearEntidad("CuboModeladoProcedural");
         gestorEntidades.AsignarTransformacion(objetoCuboModelado, ComponenteTransformacion(Vector3(0.0f, 1.0f, -5.0f)));
         gestorEntidades.AsignarCuerpoRigido(objetoCuboModelado, ComponenteCuerpoRigido(2.0f, true, 1.0f));
         gestorEntidades.AsignarTensorDeformacion(objetoCuboModelado, ComponenteTensorDeformacion(150.0f));
+        gestorEntidades.AsignarComponente<ComponenteSector>(objetoCuboModelado, ComponenteSector(0, 0));
 
         MallaEditable mallaEditable = SistemaModelado3D::GenerarCubo(2.0f, 2.0f, 2.0f);
+        (void)mallaEditable;
 
-        // 2. Crear entidad de Terreno para el mundo abierto
+        // 2. Crear entidad de Terreno para el mundo abierto (asignando su ComponenteSector)
         Entidad entidadTerreno = gestorEntidades.CrearEntidad("TerrenoMundoAbierto");
         gestorEntidades.AsignarTransformacion(entidadTerreno, ComponenteTransformacion(Vector3(0.0f, -3.0f, 0.0f)));
+        gestorEntidades.AsignarComponente<ComponenteSector>(entidadTerreno, ComponenteSector(0, 0));
         
         ComponenteTerreno terrenoBase(64, 64, 2.0f, 30.0f);
         terrenoBase.ModificarAltura(32, 32, 10.0f);
 
-        // 3. Crear Entidad con Foco de Luz Volumétrica (Efecto haz de luz realista tipo Blender)
+        // 3. Crear Entidad con Foco de Luz Volumétrica
         Entidad entidadLuzVol = gestorEntidades.CrearEntidad("FocoLuzVolumetrica");
         gestorEntidades.AsignarTransformacion(entidadLuzVol, ComponenteTransformacion(Vector3(0.0f, 5.0f, -3.0f)));
-        // Asignamos el componente de luz volumétrica con tono cálido y alta intensidad
         gestorEntidades.AsignarComponente<ComponenteLuzVolumetrica>(entidadLuzVol, ComponenteLuzVolumetrica("LuzEscenario", Vector3(1.0f, 0.85f, 0.6f), 4.0f, 20.0f, 45.0f, 0.6f));
+        gestorEntidades.AsignarComponente<ComponenteSector>(entidadLuzVol, ComponenteSector(0, 0));
+
+        // 4. Crear Entidad de Cámara Principal del Editor
+        Entidad entidadCamara = gestorEntidades.CrearEntidad("CamaraPrincipal");
+        gestorEntidades.AsignarTransformacion(entidadCamara, ComponenteTransformacion(Vector3(0.0f, 2.0f, 5.0f)));
+        sistemaControlCamara.EstablecerCamaraActiva(entidadCamara.ObtenerID());
+
+        // 5. Crear Entidad de Cielo y Atmósfera Estilizada
+        Entidad entidadCielo = gestorEntidades.CrearEntidad("CieloAtmosferico");
+        gestorEntidades.AsignarComponente<ComponenteCieloAtmosferico>(entidadCielo, ComponenteCieloAtmosferico("CieloPrincipal"));
+        gestorEntidades.AsignarComponente<ComponenteSector>(entidadCielo, ComponenteSector(0, 0));
+
+        // 6. Crear Entidad de Plano Arquitectónico (Unidad CAD / BIM - Residencia Silva)
+        Entidad entidadPlano = gestorEntidades.CrearEntidad("UnidadArquitectonica_101");
+        gestorEntidades.AsignarTransformacion(entidadPlano, ComponenteTransformacion(Vector3(0.0f, 0.0f, 0.0f)));
+        gestorEntidades.AsignarComponente<ComponentePlanoArquitectonico>(entidadPlano, ComponentePlanoArquitectonico("Unit 101 - Lvl 2"));
+        gestorEntidades.AsignarComponente<ComponenteSector>(entidadPlano, ComponenteSector(0, 0));
+
+        // 7. Crear Entidad de Personaje con Rig Esquelético y Canon de Proporciones (Unidades A)
+        Entidad entidadRig = gestorEntidades.CrearEntidad("PersonajeRigAnatomico");
+        gestorEntidades.AsignarTransformacion(entidadRig, ComponenteTransformacion(Vector3(2.0f, 0.0f, -5.0f)));
+        gestorEntidades.AsignarComponente<ComponenteProporcionesRig>(entidadRig, ComponenteProporcionesRig(0.25f));
+        gestorEntidades.AsignarComponente<ComponenteSector>(entidadRig, ComponenteSector(0, 0));
+
+        // 8. Crear Entidad Táctica de Cobertura y Flanqueo (Bloque de Nivel / Blockout)
+        Entidad entidadTactica = gestorEntidades.CrearEntidad("NodoCoberturaFlanco");
+        gestorEntidades.AsignarTransformacion(entidadTactica, ComponenteTransformacion(Vector3(-2.0f, 0.0f, -3.0f)));
+        gestorEntidades.AsignarComponente<ComponenteTacticoFlanqueo>(entidadTactica, ComponenteTacticoFlanqueo(true, true, 2.0f, "Estanteria"));
+        gestorEntidades.AsignarComponente<ComponenteSector>(entidadTactica, ComponenteSector(0, 0));
     }
 
     sistemaComandos.EjecutarLinea("spawn CuboGeneradoPorConsola", gestorEntidades);
@@ -128,7 +169,7 @@ int main() {
         // Sincronizamos el estado del botón de depuración tensorial de la UI con el sistema físico
         sistemaFisica.EstablecerModoDepuracionTensor(sistemaUI.EstaDepuracionTensorActiva());
 
-        auto entidadesActivas = gestorEntidades.ObtenerTodasLasEntidades();
+        const auto& entidadesActivas = gestorEntidades.ObtenerTodasLasEntidades();
         float jugadorX = 0.0f;
         float jugadorZ = 0.0f;
 
@@ -152,27 +193,35 @@ int main() {
             }
         }
 
-        // Streaming y actualización de subsistemas
+        // Procesamiento de atajos de cámara basados en la entidad actualmente seleccionada
+        Entidad entidadSeleccionada = sistemaSeleccion.ObtenerEntidadSeleccionada();
+        sistemaControlCamara.Actualizar(gestorEntidades, entidadSeleccionada.ObtenerID());
+
+        // Streaming dinámico y actualización de rangos espaciales en el mundo abierto
         sistemaMundoAbierto.ActualizarStreaming(gestorEntidades, jugadorX, jugadorZ);
         sistemaNavegacion.Actualizar(gestorEntidades, 0.016f);
         sistemaEdificios.ActualizarYVerificarProximidadAgentes(gestorEntidades);
         sistemaPercepcion.Actualizar(gestorEntidades);
         sistemaAerodinamica.Actualizar(gestorEntidades, 0.016f);
         sistemaAnimacion.Actualizar(gestorEntidades, 0.016f);
-        
-        // Actualizamos el subsistema de iluminación volumétrica para recalcular haces de luz
         sistemaIluminacionVolumetrica.Actualizar(gestorEntidades);
+        sistemaCieloAtmosferico.Actualizar(gestorEntidades, 0.016f);
+        sistemaPlanoArquitectonico.Actualizar(gestorEntidades);
+        sistemaProporcionesRig.Actualizar(gestorEntidades);
+        sistemaTacticoFlanqueo.Actualizar(gestorEntidades); // Actualización de rutas tácticas y flanqueo
 
         sistemaFisica.Actualizar(gestorEntidades, 0.016f);
         SistemaScripts::Actualizar(gestorEntidades, 0.016f);
 
-        // Ciclo de Inferencia de Redes Neuronales (IA)
+        // Ciclo de Inferencia de Redes Neuronales (IA) validando si el sector está activo en memoria
         for (const auto& entidad : entidadesActivas) {
             ComponenteRedNeuronal* redNeuronal = gestorEntidades.ObtenerComponente<ComponenteRedNeuronal>(entidad);
             ComponenteTransformacion* transformacion = gestorEntidades.ObtenerTransformacion(entidad);
             ComponenteSector* sector = gestorEntidades.ObtenerComponente<ComponenteSector>(entidad);
 
             bool sectorActivo = sector ? sector->ActivoEnMemoria : true;
+            bool enZonaAlerta = sector ? sector->AlertaProxima : false;
+            (void)enZonaAlerta; // Disponible para lógica de IA de alta proximidad en el mundo abierto
 
             if (redNeuronal && redNeuronal->Activo && transformacion && sectorActivo) {
                 std::vector<float> entradasSensoriales = {
@@ -182,6 +231,7 @@ int main() {
                 };
 
                 std::vector<float> decisionNeuronal = redNeuronal->Cerebro.Predecir(entradasSensoriales);
+                (void)decisionNeuronal;
             }
         }
 
@@ -192,7 +242,6 @@ int main() {
         // Interfaz y Paneles del Editor
         sistemaUI.DibujarPanelEditor(gestorEntidades, jerarquiaEscena, inspector, controladorModo, sistemaRendimiento, sistemaSeleccion);
 
-        Entidad entidadSeleccionada = sistemaSeleccion.ObtenerEntidadSeleccionada();
         if (entidadSeleccionada.ObtenerID() != 0) {
             ComponenteTransformacion* transSeleccionada = gestorEntidades.ObtenerTransformacion(entidadSeleccionada);
             if (transSeleccionada) {

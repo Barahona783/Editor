@@ -1,6 +1,6 @@
 #pragma once
-#include "../include/Vector3.hpp"
-#include "../include/Malla.hpp"
+#include "Vector3.hpp"
+#include "Malla.hpp"
 #include <vector>
 #include <memory>
 #include <cmath>
@@ -47,7 +47,7 @@ struct MallaEditable {
 class SistemaModelado3D {
 public:
 
-    // 1. Crear un cubo editable proceduralmente
+    // 1. Crear un cubo editable proceduralmente con las 6 caras completas
     static MallaEditable GenerarCubo(float ancho = 1.0f, float alto = 1.0f, float profundidad = 1.0f) {
         MallaEditable malla;
         malla.Nombre = "CuboProcedural";
@@ -56,8 +56,7 @@ public:
         float hb = alto * 0.5f;
         float hp = profundidad * 0.5f;
 
-        // Definición de vértices básicos por caras para permitir normales correctas
-        // Cara Frontal
+        // Cara Frontal (Z = +hp)
         VerticeModelado v0(Vector3(-ha, -hb,  hp), Vector3(0, 0, 1), 0.0f, 0.0f);
         VerticeModelado v1(Vector3( ha, -hb,  hp), Vector3(0, 0, 1), 1.0f, 0.0f);
         VerticeModelado v2(Vector3( ha,  hb,  hp), Vector3(0, 0, 1), 1.0f, 1.0f);
@@ -65,13 +64,45 @@ public:
         malla.AgregarTriangulo(v0, v1, v2);
         malla.AgregarTriangulo(v0, v2, v3);
 
-        // Cara Trasera
+        // Cara Trasera (Z = -hp)
         VerticeModelado v4(Vector3(-ha, -hb, -hp), Vector3(0, 0, -1), 1.0f, 0.0f);
         VerticeModelado v5(Vector3( ha, -hb, -hp), Vector3(0, 0, -1), 0.0f, 0.0f);
         VerticeModelado v6(Vector3( ha,  hb, -hp), Vector3(0, 0, -1), 0.0f, 1.0f);
         VerticeModelado v7(Vector3(-ha,  hb, -hp), Vector3(0, 0, -1), 1.0f, 1.0f);
         malla.AgregarTriangulo(v5, v4, v7);
         malla.AgregarTriangulo(v5, v7, v6);
+
+        // Cara Izquierda (X = -ha)
+        VerticeModelado v8(Vector3(-ha, -hb, -hp), Vector3(-1, 0, 0), 0.0f, 0.0f);
+        VerticeModelado v9(Vector3(-ha, -hb,  hp), Vector3(-1, 0, 0), 1.0f, 0.0f);
+        VerticeModelado v10(Vector3(-ha,  hb,  hp), Vector3(-1, 0, 0), 1.0f, 1.0f);
+        VerticeModelado v11(Vector3(-ha,  hb, -hp), Vector3(-1, 0, 0), 0.0f, 1.0f);
+        malla.AgregarTriangulo(v8, v9, v10);
+        malla.AgregarTriangulo(v8, v10, v11);
+
+        // Cara Derecha (X = +ha)
+        VerticeModelado v12(Vector3(ha, -hb, -hp), Vector3(1, 0, 0), 1.0f, 0.0f);
+        VerticeModelado v13(Vector3(ha, -hb,  hp), Vector3(1, 0, 0), 0.0f, 0.0f);
+        VerticeModelado v14(Vector3(ha,  hb,  hp), Vector3(1, 0, 0), 0.0f, 1.0f);
+        VerticeModelado v15(Vector3(ha,  hb, -hp), Vector3(1, 0, 0), 1.0f, 1.0f);
+        malla.AgregarTriangulo(v13, v12, v15);
+        malla.AgregarTriangulo(v13, v15, v14);
+
+        // Cara Superior (Y = +hb)
+        VerticeModelado v16(Vector3(-ha, hb, -hp), Vector3(0, 1, 0), 0.0f, 1.0f);
+        VerticeModelado v17(Vector3( ha, hb, -hp), Vector3(0, 1, 0), 1.0f, 1.0f);
+        VerticeModelado v18(Vector3( ha, hb,  hp), Vector3(0, 1, 0), 1.0f, 0.0f);
+        VerticeModelado v19(Vector3(-ha, hb,  hp), Vector3(0, 1, 0), 0.0f, 0.0f);
+        malla.AgregarTriangulo(v16, v17, v18);
+        malla.AgregarTriangulo(v16, v18, v19);
+
+        // Cara Inferior (Y = -hb)
+        VerticeModelado v20(Vector3(-ha, -hb, -hp), Vector3(0, -1, 0), 0.0f, 0.0f);
+        VerticeModelado v21(Vector3( ha, -hb, -hp), Vector3(0, -1, 0), 1.0f, 0.0f);
+        VerticeModelado v22(Vector3( ha, -hb,  hp), Vector3(0, -1, 0), 1.0f, 1.0f);
+        VerticeModelado v23(Vector3(-ha, -hb,  hp), Vector3(0, -1, 0), 0.0f, 1.0f);
+        malla.AgregarTriangulo(v21, v20, v23);
+        malla.AgregarTriangulo(v21, v23, v22);
 
         return malla;
     }
@@ -82,7 +113,6 @@ public:
         std::vector<VerticeModelado> nuevosVertices;
         nuevosVertices.reserve(verticesActuales);
 
-        // Duplicar y desplazar vértices a lo largo de la dirección de extrusión
         for (size_t i = 0; i < verticesActuales; ++i) {
             VerticeModelado v = malla.Vertices[i];
             v.Posicion.X += direccionNormal.X * distanciaExtrusion;
@@ -91,7 +121,6 @@ public:
             nuevosVertices.push_back(v);
         }
 
-        // Agregar los nuevos vértices y conectar las caras laterales (puentes)
         for (size_t i = 0; i < verticesActuales; ++i) {
             malla.Vertices.push_back(nuevosVertices[i]);
         }
@@ -107,18 +136,23 @@ public:
             );
 
             if (distancia < radio) {
-                // Atenuación suave basada en la distancia (caída de pincel)
                 float factor = 1.0f - (distancia / radio);
-                v.Posicion.Y += fuerza * factor; // Eleva o hunde los vértices en el eje Y
+                v.Posicion.Y += fuerza * factor;
             }
         }
     }
 
     // 4. Conversión de MallaEditable a un recurso de `Malla` listo para renderizado en el motor
     static std::shared_ptr<Malla> ExportarAMallaMotor(const MallaEditable& mallaEditable) {
-        auto mallaGPU = std::make_shared<Malla>();
-        // Aquí se enlazarían los buffers de vértices e índices hacia el motor de render (OpenGL / Vulkan)
-        // utilizando mallaEditable.Vertices y mallaEditable.Indices.
+        std::vector<Vertice> verticesGPU;
+        verticesGPU.reserve(mallaEditable.Vertices.size());
+
+        for (const auto& vm : mallaEditable.Vertices) {
+            verticesGPU.push_back({ vm.Posicion });
+        }
+
+        auto mallaGPU = std::make_shared<Malla>(verticesGPU, mallaEditable.Indices);
+        mallaGPU->InicializarEnGPU();
         return mallaGPU;
     }
 };

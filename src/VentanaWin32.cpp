@@ -1,7 +1,9 @@
+#pragma once
 #if defined(_WIN32) || defined(_WIN64)
 #include "Ventana.hpp"
-#include "ContextoOpenGLWin32.cpp"
+#include "ContextoOpenGLWin32.hpp"
 #include <windows.h>
+#include <iostream>
 
 class VentanaWin32 : public Ventana {
 private:
@@ -12,26 +14,38 @@ private:
     ContextoGrafico* m_ContextoGrafico;
 
     static LRESULT CALLBACK ProcedimientoVentana(HWND manejador, UINT mensaje, WPARAM parametroW, LPARAM parametroL) {
-        VentanaWin32* ventana = reinterpret_cast<VentanaWin32*>(GetWindowLongPtr(manejador, GWLP_USERDATA));
-        
-        switch (mensaje) {
-            case WM_CLOSE:
-            case WM_DESTROY:
-                if (ventana) ventana->m_EstaEjecutandose = false;
-                PostQuitMessage(0);
-                return 0;
-            case WM_SIZE:
-                if (ventana) {
+        VentanaWin32* ventana = nullptr;
+
+        if (mensaje == WM_NCCREATE) {
+            // Asignación segura del puntero de la clase nativa desde la creación misma de la ventana Win32
+            CREATESTRUCT* estructuraCreacion = reinterpret_cast<CREATESTRUCT*>(parametroL);
+            ventana = reinterpret_cast<VentanaWin32*>(estructuraCreacion->lpCreateParams);
+            SetWindowLongPtr(manejador, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(ventana));
+        } else {
+            ventana = reinterpret_cast<VentanaWin32*>(GetWindowLongPtr(manejador, GWLP_USERDATA));
+        }
+
+        if (ventana) {
+            switch (mensaje) {
+                case WM_CLOSE:
+                case WM_DESTROY:
+                    ventana->m_EstaEjecutandose = false;
+                    PostQuitMessage(0);
+                    return 0;
+                case WM_SIZE:
                     ventana->m_Datos.Ancho = LOWORD(parametroL);
                     ventana->m_Datos.Alto = HIWORD(parametroL);
-                }
-                return 0;
+                    return 0;
+            }
         }
+
         return DefWindowProc(manejador, mensaje, parametroW, parametroL);
     }
 
 public:
-    VentanaWin32(const PropiedadesVentana& propiedades) : m_Datos(propiedades), m_EstaEjecutandose(true) {
+    VentanaWin32(const PropiedadesVentana& propiedades) 
+        : m_ManejadorVentana(NULL), m_Instancia(NULL), m_Datos(propiedades), m_EstaEjecutandose(true), m_ContextoGrafico(nullptr) {
+        
         m_Instancia = GetModuleHandle(NULL);
 
         WNDCLASSEXW claseVentana = { 0 };
@@ -42,6 +56,7 @@ public:
         claseVentana.hCursor = LoadCursor(NULL, IDC_ARROW);
         claseVentana.lpszClassName = L"ClaseVentanaMotorPersonalizada";
 
+        // Registramos la clase de ventana (si ya está registrada por otra instancia, no es un error crítico)
         RegisterClassExW(&claseVentana);
 
         RECT rectangulo = { 0, 0, (LONG)m_Datos.Ancho, (LONG)m_Datos.Alto };
@@ -50,24 +65,43 @@ public:
         wchar_t tituloTextoAncho[256];
         MultiByteToWideChar(CP_UTF8, 0, m_Datos.Titulo.c_str(), -1, tituloTextoAncho, 256);
 
+        // Pasamos 'this' como parámetro en CreateWindowEx para capturarlo de forma segura en WM_NCCREATE
         m_ManejadorVentana = CreateWindowExW(
             0, claseVentana.lpszClassName, tituloTextoAncho,
             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
             CW_USEDEFAULT, CW_USEDEFAULT,
             rectangulo.right - rectangulo.left, rectangulo.bottom - rectangulo.top,
-            NULL, NULL, m_Instancia, NULL
+            NULL, NULL, m_Instancia, this
         );
 
-        SetWindowLongPtr(m_ManejadorVentana, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+        if (!m_ManejadorVentana) {
+            std::cerr << "[VentanaWin32] Error crítico: No se pudo crear la ventana Win32." << std::endl;
+            m_EstaEjecutandose = false;
+            return;
+        }
 
+        // Inicialización segura del Contexto Gráfico de Windows
         m_ContextoGrafico = new ContextoOpenGLWin32(m_ManejadorVentana);
-        m_ContextoGrafico->Inicializar();
+        if (!m_ContextoGrafico->Inicializar()) {
+            std::cerr << "[VentanaWin32] Error crítico: Falló la inicialización del contexto OpenGL en Windows." << std::endl;
+        }
     }
 
     ~VentanaWin32() override {
-        delete m_ContextoGrafico;
-        DestroyWindow(m_ManejadorVentana);
+        // 1. Primero se libera el contexto gráfico mientras la ventana y el DC siguen activos
+        if (m_ContextoGrafico) {
+            delete m_ContextoGrafico;
+            m_ContextoGrafico = nullptr;
+        }
+
+        // 2. Luego se destruye la ventana de Windows de forma segura
+        if (m_ManejadorVentana) {
+            DestroyWindow(m_ManejadorVentana);
+            m_ManejadorVentana = NULL;
+        }
+
         UnregisterClassW(L"ClaseVentanaMotorPersonalizada", m_Instancia);
+        std::cout << "[VentanaWin32] Ventana y recursos destruidos correctamente." << std::endl;
     }
 
     void AlActualizar() override {

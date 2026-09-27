@@ -50,7 +50,6 @@ public:
         std::vector<unsigned int> indices;
 
         // Vértice del ápice (origen de la luz en la punta superior del cono)
-        // Posición: (0, altura, 0), Normal: (0, 1, 0), UV: (0.5, 1.0)
         vertices.push_back(0.0f); vertices.push_back(altura); vertices.push_back(0.0f);
         vertices.push_back(0.0f); vertices.push_back(1.0f); vertices.push_back(0.0f);
         vertices.push_back(0.5f); vertices.push_back(1.0f);
@@ -64,22 +63,24 @@ public:
 
             // Posición en la base
             vertices.push_back(x); vertices.push_back(0.0f); vertices.push_back(z);
+            
             // Normal orientada hacia afuera y abajo
             float normY = radioBase / altura;
             Vector3 normal(std::cos(angulo), normY, std::sin(angulo));
             normal.Normalizar();
             vertices.push_back(normal.X); vertices.push_back(normal.Y); vertices.push_back(normal.Z);
+            
             // Coordenadas UV
             vertices.push_back(u); vertices.push_back(0.0f);
         }
 
-        // Centro de la base del cono (para cerrar la geometría si es necesario)
+        // Centro de la base del cono (para cerrar la geometría)
         unsigned int indiceCentroBase = static_cast<unsigned int>(vertices.size() / 8);
         vertices.push_back(0.0f); vertices.push_back(0.0f); vertices.push_back(0.0f);
         vertices.push_back(0.0f); vertices.push_back(-1.0f); vertices.push_back(0.0f);
         vertices.push_back(0.5f); vertices.push_back(0.5f);
 
-        // Construcción de índices para las caras laterales del cono
+        // Construcción de índices para las caras laterales y la base del cono
         for (int i = 0; i < resolucionRadial; ++i) {
             unsigned int actual = i + 1;
             unsigned int siguiente = (i + 1) % resolucionRadial + 1;
@@ -95,6 +96,8 @@ public:
             indices.push_back(siguiente);
         }
 
+        // Asignación de datos a la malla (métodos estándar de carga de buffers)
+        mallaHaz.CargarVerticesIndices(vertices, indices);
         return mallaHaz;
     }
 
@@ -108,7 +111,7 @@ public:
     // Actualiza y procesa todas las luces volumétricas activas en la escena ECS
     template <typename GestorEntidadesT>
     static void Actualizar(GestorEntidadesT& gestorEntidades) {
-        auto entidades = gestorEntidades.ObtenerTodasLasEntidades();
+        const auto& entidades = gestorEntidades.ObtenerTodasLasEntidades();
         for (const auto& entidad : entidades) {
             ComponenteLuzVolumetrica* luz = gestorEntidades.template ObtenerComponente<ComponenteLuzVolumetrica>(entidad);
             if (luz && luz->Activa) {

@@ -206,7 +206,7 @@ struct ComponenteTerreno {
     }
 
     // Función para modificar la altura de un punto del terreno (útil para edición o deformación en tiempo real)
-    void ModificarAltura(int x, int z, mouseYDelta float deltaAltura) {
+    void ModificarAltura(int x, int z, float deltaAltura) {
         if (x >= 0 && x < AnchoMalla && z >= 0 && z < AltoMalla) {
             Alturas[z * AnchoMalla + x] += deltaAltura;
             if (Alturas[z * AnchoMalla + x] > AlturaMaxima) {

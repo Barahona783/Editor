@@ -1,6 +1,9 @@
 #pragma once
 #include "Vector3.hpp"
 
+// ==========================================
+// SISTEMA DE COLISIONES AABB (Caja Delimitadora)
+// ==========================================
 struct CajaColision {
     Vector3 Minimo;
     Vector3 Maximo;
@@ -10,7 +13,7 @@ struct CajaColision {
         Vector3 maximo = Vector3(0.5f, 0.5f, 0.5f)
     ) : Minimo(minimo), Maximo(maximo) {}
 
-    // Evalúa la intersección entre dos cajas delimitadoras AABB
+    // Evalúa la intersección entre dos cajas delimitadoras AABB en el espacio del mundo
     bool ColisionaCon(const CajaColision& otra, const Vector3& posEsta, const Vector3& posOtra) const {
         Vector3 estaMin = posEsta + Minimo;
         Vector3 estaMax = posEsta + Maximo;

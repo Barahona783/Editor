@@ -4,26 +4,32 @@
 #include "Componentes.hpp"
 #include <iostream>
 
-// Clase base virtual de la cual heredarán todos los scripts de tus entidades
+// ==========================================
+// INTERFAZ BASE DE SCRIPTS PARA ENTIDADES (ECS)
+// ==========================================
 class ScriptEntidad {
 public:
     virtual ~ScriptEntidad() = default;
 
-    // Se ejecuta una vez cuando la entidad nace o se inicializa
+    // Se ejecuta una vez cuando la entidad nace o se inicializa en el mundo
     virtual void Iniciar(Entidad entidad, GestorEntidades& gestor) {}
 
-    // Se ejecuta cada frame (ideal para movimiento, lógica de juego, input)
+    // Se ejecuta en cada frame (ideal para movimiento, lógica de juego, input o IA local)
     virtual void Actualizar(Entidad entidad, GestorEntidades& gestor, float dt) {}
 
-    // Se destruye al limpiar la entidad
+    // Se ejecuta al limpiar o destruir la entidad del mundo
     virtual void Destruir(Entidad entidad, GestorEntidades& gestor) {}
 };
 
-// Sistema encargado de actualizar todos los scripts activos en el mundo en cada frame
+// ==========================================
+// SISTEMA DE GESTIÓN Y ACTUALIZACIÓN DE SCRIPTS
+// ==========================================
 class SistemaScripts {
 public:
+    // Actualiza de manera secuencial y segura todos los scripts activos en el mundo abierto
     static void Actualizar(GestorEntidades& gestor, float dt) {
-        auto entidades = gestor.ObtenerTodasLasEntidades();
+        const auto& entidades = gestor.ObtenerTodasLasEntidades();
+        
         for (auto entidad : entidades) {
             // Verificación y ejecución segura del componente de script asociado a la entidad
             auto* scriptComp = gestor.ObtenerComponente<ComponenteScript>(entidad);

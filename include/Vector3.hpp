@@ -83,6 +83,11 @@ struct Vector3 {
         return X * otro.X + Y * otro.Y + Z * otro.Z;
     }
 
+    // Método estático auxiliar para Producto Punto (compatibilidad con sistemas externos)
+    static float ProductoPunto(const Vector3& v1, const Vector3& v2) {
+        return v1.ProductoEscalar(v2);
+    }
+
     // Producto Cruz / Vectorial (Cross Product)
     Vector3 ProductoCruz(const Vector3& otro) const {
         return Vector3(
@@ -121,6 +126,11 @@ struct Vector3 {
     // Longitud y Normalización
     float ObtenerLongitud() const {
         return std::sqrt(X * X + Y * Y + Z * Z);
+    }
+
+    // Alias inline de compatibilidad para métodos externos que usen Magnitud()
+    float Magnitud() const {
+        return ObtenerLongitud();
     }
 
     Vector3 ObtenerNormalizado() const {

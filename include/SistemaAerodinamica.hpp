@@ -20,7 +20,7 @@ public:
         m_VientoGlobal = nuevoViento;
     }
 
-    // Calcula y aplica las fuerzas aerodinámicas (Arrastre과 Sustentación) de forma universal
+    // Calcula y aplica las fuerzas aerodinámicas (Arrastre y Sustentación) de forma universal
     void Actualizar(GestorEntidades& gestor, float deltaTime) {
         const auto& entidades = gestor.ObtenerTodasLasEntidades();
 
@@ -33,8 +33,13 @@ public:
                 continue;
             }
 
-            // Velocidad relativa considerando el movimiento de la entidad frente al viento global del mundo
-            Vector3 velocidadVientoRelativo = m_VientoGlobal; 
+            // Velocidad relativa real: Diferencia entre el viento global y la velocidad del cuerpo rígido de la entidad
+            Vector3 velocidadVientoRelativo = Vector3(
+                m_VientoGlobal.X - rigido->Velocidad.X,
+                m_VientoGlobal.Y - rigido->Velocidad.Y,
+                m_VientoGlobal.Z - rigido->Velocidad.Z
+            );
+
             float velocidadRelativaMagnitud = std::sqrt(
                 velocidadVientoRelativo.X * velocidadVientoRelativo.X +
                 velocidadVientoRelativo.Y * velocidadVientoRelativo.Y +
@@ -51,10 +56,23 @@ public:
 
             // Aplicación de las fuerzas sobre los componentes físicos de la entidad
             if (rigido->Masa > 0.0f) {
+                // Aceleración vertical derivada de la sustentación o downforce
                 float aceleracionSustentacion = fuerzaSustentacionMagnitud / rigido->Masa;
 
                 // Modificamos sutilmente la posición según el impacto aerodinámico universal
                 trans->Posicion.Y += aceleracionSustentacion * deltaTime * 0.1f;
+                
+                // Aplicamos también un pequeño arrastre directo sobre la velocidad del cuerpo rígido
+                if (velocidadRelativaMagnitud > 0.001f) {
+                    Vector3 direccionRelativa = Vector3(
+                        velocidadVientoRelativo.X / velocidadRelativaMagnitud,
+                        velocidadVientoRelativo.Y / velocidadRelativaMagnitud,
+                        velocidadVientoRelativo.Z / velocidadRelativaMagnitud
+                    );
+                    float aceleracionArrastre = fuerzaArrastreMagnitud / rigido->Masa;
+                    rigido->Velocidad.X += direccionRelativa.X * aceleracionArrastre * deltaTime;
+                    rigido->Velocidad.Z += direccionRelativa.Z * aceleracionArrastre * deltaTime;
+                }
             }
         }
     }

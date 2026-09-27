@@ -8,6 +8,9 @@
 #include "GestorEntidades.hpp"
 #include "BusEventos.hpp"
 
+// ==========================================
+// SISTEMA DE CONSOLA Y GESTIÓN DE COMANDOS DEL MOTOR
+// ==========================================
 class SistemaComandos {
 public:
     using ComandoCallback = std::function<void(const std::vector<std::string>& argumentos, GestorEntidades& gestor)>;
@@ -18,7 +21,7 @@ private:
     SistemaComandos() {
         // Registrar comandos nativos base del motor
         RegistrarComando("ayuda", [](const auto&, auto&) {
-            std::cout << "[Consola Motor] Comandos disponibles: ayuda, spawn, limpiar\n";
+            std::cout << "\n[Consola Motor] Comandos disponibles: ayuda, spawn, limpiar\n";
         });
 
         RegistrarComando("spawn", [](const std::vector<std::string>& args, GestorEntidades& gestor) {
@@ -41,7 +44,7 @@ public:
         m_Comandos[nombre] = callback;
     }
 
-    // Procesa una línea de texto introducida en la consola del editor
+    // Procesa una línea de texto introducida en la consola del editor o terminal de comandos
     bool EjecutarLinea(const std::string& lineaDeComando, GestorEntidades& gestor) {
         std::stringstream ss(lineaDeComando);
         std::string comando;
@@ -65,6 +68,7 @@ public:
         }
     }
 
+    // Eliminación de constructor de copia y operador de asignación para blindar el Singleton
     SistemaComandos(const SistemaComandos&) = delete;
     SistemaComandos& operator=(const SistemaComandos&) = delete;
 };

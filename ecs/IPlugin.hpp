@@ -1,25 +1,28 @@
 #pragma once
 #include "GestorEntidades.hpp"
 
-// Interfaz base abstracta pura para cualquier plugin o sistema externo del motor.
-// Ningún plugin tiene acceso al código fuente del núcleo, solo interactúa a través de esta interfaz segura.
+// ==========================================
+// INTERFAZ BASE PARA PLUGINS Y MÓDULOS EXTERNOS
+// ==========================================
 class IPlugin {
 public:
     virtual ~IPlugin() = default;
 
-    // Se ejecuta al cargar el plugin en el motor
+    // Se ejecuta al cargar y registrar el plugin en el motor
     virtual void Inicializar(GestorEntidades& gestor) = 0;
 
-    // Se ejecuta en cada ciclo del bucle principal del juego/editor
+    // Se ejecuta en cada ciclo del bucle principal del juego o del editor
     virtual void Actualizar(GestorEntidades& gestor, float deltaTime) = 0;
 
-    // Se ejecuta al descargar o cerrar el motor
+    // Se ejecuta al descargar el plugin o cerrar el motor para liberar recursos
     virtual void Destruir(GestorEntidades& gestor) = 0;
 
-    // Permite obtener el nombre identificador del plugin
+    // Permite obtener el nombre identificador único del plugin
     virtual const char* ObtenerNombre() const = 0;
 };
 
-// Definición del tipo de función para la fábrica de creación del plugin en tiempo de ejecución (dinámico)
+// ==========================================
+// DEFINICIÓN DE FÁBRICAS PARA CARGA DINÁMICA
+// ==========================================
 typedef IPlugin* (*CrearPluginFunc)();
 typedef void (*DestruirPluginFunc)(IPlugin*);

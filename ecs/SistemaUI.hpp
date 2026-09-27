@@ -15,12 +15,15 @@
 #include "EditorNodos.hpp"
 #include "CirculoMohr.hpp"
 
+// ==========================================
+// SISTEMA DE INTERFAZ GRÁFICA Y EDITOR (UI)
+// ==========================================
 class SistemaUI {
 private:
     bool m_MostrarEditor;
     bool m_MostrarDepuracionTensor;
     bool m_MostrarDepuracionMundo; 
-    bool m_MostrarDepuracionOpticaAnim; // <-- NUEVO: Control para visualizar el panel unificado de Óptica y Animación
+    bool m_MostrarDepuracionOpticaAnim; // Control para visualizar el panel unificado de Óptica y Animación
 
     VentanaFlotante m_PanelJerarquia;
     VentanaFlotante m_PanelInspector;
@@ -28,7 +31,7 @@ private:
     VentanaFlotante m_PanelNodos;
     VentanaFlotante m_PanelTensor;
     VentanaFlotante m_PanelMundo; 
-    VentanaFlotante m_PanelOpticaAnim; // <-- NUEVO: Panel flotante para línea de tiempo y óptica (Ley de Fermat)
+    VentanaFlotante m_PanelOpticaAnim; // Panel flotante para línea de tiempo y óptica (Ley de Fermat)
 
     EditorNodos m_GestorNodos;
 
@@ -92,7 +95,7 @@ public:
         }
         clicAnteriorMundo = mousePresionado;
 
-        // 3. NUEVO: Botón Óptica y Animación Keyframes (X: 780-805, Y: 10-25)
+        // 3. Botón Óptica y Animación Keyframes (X: 780-805, Y: 10-25)
         static bool clicAnteriorOpticaAnim = false;
         if (mousePresionado && !clicAnteriorOpticaAnim) {
             if (mouseX >= 780.0f && mouseX <= 805.0f && mouseY >= 10.0f && mouseY <= 25.0f) {
@@ -194,7 +197,7 @@ public:
             glVertex2f(740.0f, 25.0f);
         glEnd();
 
-        // NUEVO: Indicador de Óptica y Animación (Cuadrado Morado/Magenta)
+        // Indicador de Óptica y Animación (Cuadrado Morado/Magenta)
         if (m_MostrarDepuracionOpticaAnim) {
             glColor3f(0.7f, 0.2f, 0.9f);
         } else {
@@ -294,6 +297,7 @@ public:
 
             EstadoEsfuerzos estadoActual = { -10.0f, 50.0f, 40.0f };
             ResultadosMohr res = CirculoMohr::Calcular(estadoActual);
+            (void)res;
 
             float centroVisualX = m_PanelTensor.X + m_PanelTensor.Ancho * 0.5f;
             float centroVisualY = m_PanelTensor.Y + m_PanelTensor.Alto * 0.55f;
@@ -354,7 +358,7 @@ public:
             glEnd();
         }
 
-        // --- NUEVO: Panel de Óptica (Ley de Fermat) y Animación por Keyframes ---
+        // Panel de Óptica (Ley de Fermat) y Animación por Keyframes
         if (m_MostrarDepuracionOpticaAnim) {
             glColor4f(0.08f, 0.05f, 0.10f, 0.92f);
             glBegin(GL_QUADS);

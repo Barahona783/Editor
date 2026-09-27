@@ -7,12 +7,15 @@
 #include <memory>
 #include <iostream>
 
+// ==========================================
+// GESTOR DE ENTIDADES Y COMPONENTES (ECS Core)
+// ==========================================
 class GestorEntidades {
 private:
     IdentificadorEntidad m_ContadorEntidades = 0;
     std::vector<Entidad> m_Entidades;
 
-    // Almacenamiento de componentes por ID
+    // Almacenamiento básico de componentes por ID de entidad
     std::unordered_map<IdentificadorEntidad, ComponenteTransformacion> m_ComponentesTransformacion;
     std::unordered_map<IdentificadorEntidad, ComponenteNombre> m_ComponentesNombre;
     std::unordered_map<IdentificadorEntidad, ComponenteMalla> m_ComponentesMalla;
@@ -28,6 +31,7 @@ private:
     std::unordered_map<IdentificadorEntidad, ComponenteAerodinamico> m_ComponentesAerodinamica;
 
 public:
+    // Crea una nueva entidad única en el mundo con un nombre identificativo opcional
     Entidad CrearEntidad(const std::string& nombre = "ObjetoMotor") {
         IdentificadorEntidad nuevoID = ++m_ContadorEntidades;
         Entidad entidad(nuevoID);
@@ -109,11 +113,11 @@ public:
     }
 
     ComponenteAerodinamico* ObtenerAerodinamica(const Entidad& entidad) {
-        auto iter = m_ComponentesAerodinamica.find(entidad.ObtenerID());
-        return (iter != m_ComponentesAerodinamica.end()) ? &(iter->second) : nullptr;
+        auto iter = m_ComponentesAerodinamico.find(entidad.ObtenerID());
+        return (iter != m_ComponentesAerodinamico.end()) ? &(iter->second) : nullptr;
     }
 
-    // Método genérico para compatibilidad con sistemas avanzados
+    // Método genérico para compatibilidad con sistemas avanzados y scripts
     template <typename T>
     T* ObtenerComponente(const Entidad& entidad);
 

@@ -5,8 +5,12 @@
 class Gizmo3D {
 public:
     static void DibujarEjes(const Vector3& posicion, float tamano = 1.0f) {
+        // Guardar los atributos actuales de color y ancho de línea para no contaminar el estado global de OpenGL
+        glPushAttrib(GL_CURRENT_BIT | GL_LINE_BIT);
+
         glPushMatrix();
         glTranslatef(posicion.X, posicion.Y, posicion.Z);
+        
         glLineWidth(3.0f);
 
         glBegin(GL_LINES);
@@ -26,7 +30,9 @@ public:
             glVertex3f(0.0f, 0.0f, tamano);
         glEnd();
 
-        glLineWidth(1.0f);
         glPopMatrix();
+
+        // Restaurar los estados previos de OpenGL automáticamente
+        glPopAttrib();
     }
 };

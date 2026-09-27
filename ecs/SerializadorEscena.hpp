@@ -11,6 +11,9 @@
 #include "SistemaAnimacion.hpp"
 #include "SistemaAerodinamica.hpp"
 
+// ==========================================
+// SERIALIZADOR Y GESTOR DE PERSISTENCIA DE ESCENAS
+// ==========================================
 class SerializadorEscena {
 public:
     static bool GuardarEscena(GestorEntidades& gestor, const std::string& rutaArchivo) {
@@ -38,7 +41,7 @@ public:
             }
 
             // ==========================================
-            // INTEGRACIÓN: Serializar estado del tensor de deformación
+            // SERIALIZACIÓN DE TENSOR DE DEFORMACIÓN
             // ==========================================
             ComponenteTensorDeformacion* tensor = gestor.ObtenerComponente<ComponenteTensorDeformacion>(e);
             if (tensor) {
@@ -46,7 +49,7 @@ public:
             }
 
             // ==========================================
-            // NUEVO: Serializar Componente Óptico (Ley de Fermat)
+            // SERIALIZACIÓN DE COMPONENTE ÓPTICO (LEY DE FERMAT)
             // ==========================================
             ComponenteOptico* optico = gestor.ObtenerComponente<ComponenteOptico>(e);
             if (optico) {
@@ -54,7 +57,7 @@ public:
             }
 
             // ==========================================
-            // NUEVO: Serializar Componente Aerodinámico
+            // SERIALIZACIÓN DE COMPONENTE AERODINÁMICO
             // ==========================================
             ComponenteAerodinamico* aero = gestor.ObtenerComponente<ComponenteAerodinamico>(e);
             if (aero) {
@@ -62,7 +65,7 @@ public:
             }
 
             // ==========================================
-            // NUEVO: Serializar Componente de Animación
+            // SERIALIZACIÓN DE COMPONENTE DE ANIMACIÓN
             // ==========================================
             ComponenteAnimacion* anim = gestor.ObtenerComponente<ComponenteAnimacion>(e);
             if (anim) {
@@ -73,7 +76,9 @@ public:
         }
 
         archivo.close();
+        #ifdef _DEBUG
         std::cout << "[SerializadorEscena] Escena guardada correctamente en: " << rutaArchivo << "\n";
+        #endif
         return true;
     }
 
@@ -96,18 +101,20 @@ public:
         bool deformadoLeido = false;
         bool tieneTensor = false;
 
-        // Variables temporales para subsistemas nuevos
+        // Variables temporales para subsistemas ópticos
         float indiceRefLeido = 1.33f;
         float radioInfLeido = 10.0f;
         bool opticoActivoLeido = true;
         bool tieneOptico = false;
 
+        // Variables temporales para aerodinámica
         float cdLeido = 0.35f;
         float areaLeida = 2.0f;
         float liftLeido = -0.5f;
         bool aeroActivoLeido = true;
         bool tieneAero = false;
 
+        // Variables temporales para animación
         std::string nombreClipLeido = "Default";
         float duracionAnimLeida = 5.0f;
         bool bucleAnimLeido = true;
@@ -193,32 +200,21 @@ public:
                 }
 
                 if (entidadActual.ObtenerID() != 0 && tieneOptico) {
-                    // Acceso seguro mediante obtención o inserción directa basada en el gestor de componentes
-                    ComponenteOptico* compOptico = gestor.ObtenerComponente<ComponenteOptico>(entidadActual);
-                    if (!compOptico) {
-                        // Si no existe, lo inicializamos creando o asignando mediante el contenedor del gestor
-                        // (Nota: Si tu gestor requiere un método específico, se ajusta aquí, o se modifica directamente el puntero)
-                    }
-                    // Aplicamos los valores leídos directamente sobre la estructura obtenida o asignada
+                    ComponenteOptico compOpticoTemp(indiceRefLeido, radioInfLeido);
+                    compOpticoTemp.Activo = opticoActivoLeido;
+                    gestor.AsignarComponente<ComponenteOptico>(entidadActual, compOpticoTemp);
                 }
 
                 if (entidadActual.ObtenerID() != 0 && tieneAero) {
-                    ComponenteAerodinamico* compAero = gestor.ObtenerComponente<ComponenteAerodinamico>(entidadActual);
-                    if (compAero) {
-                        compAero->CoeficienteArrastre = cdLeido;
-                        compAero->AreaFrontal = areaLeida;
-                        compAero->CoeficienteSustentacion = liftLeido;
-                        compAero->Activo = aeroActivoLeido;
-                    }
+                    ComponenteAerodinamico compAeroTemp(cdLeido, areaLeida, liftLeido);
+                    compAeroTemp.Activo = aeroActivoLeido;
+                    gestor.AsignarComponente<ComponenteAerodinamico>(entidadActual, compAeroTemp);
                 }
 
                 if (entidadActual.ObtenerID() != 0 && tieneAnim) {
-                    ComponenteAnimacion* compAnim = gestor.ObtenerComponente<ComponenteAnimacion>(entidadActual);
-                    if (compAnim) {
-                        compAnim->NombreClip = nombreClipLeido;
-                        compAnim->Duracion = duracionAnimLeida;
-                        compAnim->EnBucle = bucleAnimLeido;
-                    }
+                    ComponenteAnimacion compAnimTemp(nombreClipLeido, duracionAnimLeida);
+                    compAnimTemp.EnBucle = bucleAnimLeido;
+                    gestor.AsignarComponente<ComponenteAnimacion>(entidadActual, compAnimTemp);
                 }
 
                 entidadActual = Entidad(0); 
@@ -226,7 +222,9 @@ public:
         }
 
         archivo.close();
+        #ifdef _DEBUG
         std::cout << "[SerializadorEscena] Escena cargada correctamente desde: " << rutaArchivo << "\n";
+        #endif
         return true;
     }
 };

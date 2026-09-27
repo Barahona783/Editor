@@ -2,7 +2,6 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
-#include "Vector3.hpp"
 
 // Clase que representa una Capa Individual de la Red Neuronal
 class CapaNeuronal {
@@ -17,15 +16,15 @@ public:
         Salidas.resize(numNeuronas, 0.0f);
     }
 
-    // Función de activación Sigmoide: σ(z) = 1 / (1 + e^-z)[span_1](start_span)[span_1](end_span)
+    // Función de activación Sigmoide: σ(z) = 1 / (1 + e^-z)
     float ActivarSigmoide(float z) const {
         return 1.0f / (1.0f + std::exp(-z));
     }
 
     // Propagación hacia adelante (Forward Propagation): Z = W * X + b
     std::vector<float> Propagar(const std::vector<float>& entrada) {
-        int numNeuronas = Pesos.size();
-        int numEntradas = entrada.size();
+        int numNeuronas = static_cast<int>(Pesos.size());
+        int numEntradas = static_cast<int>(entrada.size());
 
         for (int i = 0; i < numNeuronas; ++i) {
             float suma = Sesgos[i];
@@ -44,7 +43,7 @@ private:
     std::vector<CapaNeuronal> m_Capas;
 
 public:
-    RedNeuronal() {}
+    RedNeuronal() = default;
 
     // Añade una capa a la red especificando cantidad de neuronas y entradas
     void AnadirCapa(int numNeuronas, int numEntradas) {
@@ -52,13 +51,13 @@ public:
     }
 
     // Ejecuta la inferencia completa desde la capa de entrada hasta la salida
-    std::vector<float> Predecir(const std::vector<float>& datosEntrada) {
+    std::vector<float> Predecir(const std::vector<float>& datosEntrada) const {
         if (m_Capas.empty()) return {};
 
-        std::vector<float> activacionActual = m_Capas[0].Propagar(datosEntrada);
+        std::vector<float> activacionActual = const_cast<CapaNeuronal&>(m_Capas[0]).Propagar(datosEntrada);
         
         for (size_t i = 1; i < m_Capas.size(); ++i) {
-            activacionActual = m_Capas[i].Propagar(activacionActual);
+            activacionActual = const_cast<CapaNeuronal&>(m_Capas[i]).Propagar(activacionActual);
         }
 
         return activacionActual;
